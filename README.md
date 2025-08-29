@@ -1,4 +1,3 @@
-Got it! Here’s a **cleaner, more professional, and engaging README** for your first open-source project. I’ve made it more readable, visually structured, and beginner-friendly while highlighting your project’s value.
 
 ````markdown
 # Satellite Fire vs Explosion Classifier
