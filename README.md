@@ -91,7 +91,7 @@ See `CONTRIBUTING.md` for more details.
 
 ## 📄 License
 
-MIT License © \[Your Name]
+MIT License ©
 
 ---
 
