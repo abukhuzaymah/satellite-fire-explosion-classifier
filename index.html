@@ -1,0 +1,3156 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gaza Fires vs Explosions Map</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    /* --- Modern Google/Netflix-inspired UI --- */
+    html, body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f7fafd;
+      color: #222;
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+    #map { height: 100vh; width: 100vw; }
+    .sidebar-unified {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 370px;
+      min-width: 220px;
+      max-width: 95vw;
+      height: 100vh;
+      background: #fff;
+      box-shadow: 2px 0 24px rgba(0,0,0,0.10);
+      z-index: 1400;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      border-right: 1px solid #e0e0e0;
+      pointer-events: auto;
+      border-radius: 0 24px 24px 0;
+      overflow: hidden;
+    }
+    .sidebar-status-banner {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 24px;
+      font-size: 15px;
+      font-weight: 600;
+      background: #f7fafd;
+      color: #388e3c;
+      border-bottom: 1px solid #e0e0e0;
+      letter-spacing: 0.01em;
+    }
+    .sidebar-status-banner.error {
+      background: #fff5f5;
+      color: #d32f2f;
+      border-bottom: 1.5px solid #d32f2f22;
+    }
+    .sidebar-status-banner .status-icon {
+      font-size: 22px;
+      margin-right: 2px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .sidebar-content {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      padding: 0 0 0 0;
+      overflow-y: auto;
+    }
+    .sidebar-section {
+      padding: 28px 32px 0 32px;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .sidebar-section:last-child {
+      border-bottom: none;
+      padding-bottom: 32px;
+    }
+    .sidebar-header {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1976d2;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      margin-top: 0;
+    }
+    .model-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f2f4f8;
+      border-radius: 999px;
+      padding: 6px 8px;
+      gap: 0;
+      margin-bottom: 0;
+      margin-top: 0;
+      box-shadow: 0 1px 4px #0001;
+      width: 100%;
+      max-width: 320px;
+      align-self: center;
+    }
+    .model-toggle-btn {
+      border: none;
+      background: none;
+      font-size: 15px;
+      font-weight: 600;
+      color: #888;
+      padding: 8px 22px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.18s, color 0.18s;
+      outline: none;
+    }
+    .model-toggle-btn.active {
+      background: linear-gradient(90deg, #e3f0ff 0%, #f7fafd 100%);
+      color: #1976d2;
+      box-shadow: 0 2px 8px #1976d211;
+    }
+    .model-toggle-btn:focus {
+      outline: 2px solid #1976d2;
+    }
+    #currentModelLabel {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1976d2;
+      margin-left: 10px;
+      align-self: center;
+    }
+    .playback-card {
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+      gap: 18px;
+      padding: 0;
+      background: none;
+      border-radius: 0;
+      box-shadow: none;
+      width: 100%;
+    }
+    .apple-play-btn {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f44336, #ff9800);
+      box-shadow: 0 2px 8px #f4433622;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: box-shadow 0.2s;
+    }
+    .apple-play-btn:hover, .apple-play-btn:focus {
+      box-shadow: 0 4px 16px #f4433640;
+      outline: none;
+    }
+    #playbackStatus {
+      font-size: 15px;
+      font-weight: 500;
+      color: #1a1a1a;
+      white-space: nowrap;
+    }
+    .slider-card {
+      padding: 0;
+      background: none;
+      border-radius: 0;
+      box-shadow: none;
+      width: 100%;
+    }
+    #data-age-card {
+      font-size: 13px;
+      text-align: center;
+      width: 100%;
+      background: #f7fafd;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px #1976d211;
+      padding: 10px 0 8px 0;
+      margin: 0;
+      border: 1px solid #f0f0f0;
+    }
+    .provenance-card {
+      background: #f7fafd;
+      font-size: 13px;
+      color: #444;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px #4285f411;
+      padding: 14px 18px 10px 18px;
+      margin-top: 0;
+      margin-bottom: 0;
+      border-left: 3px solid #4285f4;
+      font-weight: 500;
+      width: 100%;
+    }
+    @media (max-width: 900px) {
+      .sidebar-unified {
+        width: 98vw;
+        min-width: 0;
+        max-width: 98vw;
+        border-radius: 0 0 24px 24px;
+      }
+      .sidebar-section {
+        padding: 18px 10px 0 18px;
+      }
+      .provenance-card, #data-age-card {
+        margin: 0 8px;
+      }
+    }
+    
+    @media (max-width: 600px) {
+      .sidebar-unified {
+        width: 100vw;
+        max-width: 100vw;
+        border-radius: 0;
+      }
+      .sidebar-section {
+        padding: 12px 8px 0 12px;
+      }
+      .sidebar-header {
+        font-size: 12px;
+        margin-bottom: 6px;
+      }
+      .model-toggle {
+        padding: 4px 6px;
+        gap: 0;
+      }
+      .model-toggle-btn {
+        font-size: 13px;
+        padding: 6px 16px;
+      }
+      .provenance-card, #data-age-card {
+        margin: 0 4px;
+        padding: 12px 14px;
+        font-size: 12px;
+      }
+      .material-card {
+        padding: 14px 16px;
+        border-radius: 12px;
+      }
+      .playback-fab {
+        width: 48px;
+        height: 48px;
+      }
+      .material-icons {
+        font-size: 28px;
+      }
+      .playback-label {
+        font-size: 14px;
+      }
+    }
+    
+    @media (max-width: 400px) {
+      .sidebar-section {
+        padding: 8px 6px 0 8px;
+      }
+      .sidebar-header {
+        font-size: 11px;
+        margin-bottom: 4px;
+      }
+      .model-toggle {
+        padding: 3px 4px;
+      }
+      .model-toggle-btn {
+        font-size: 12px;
+        padding: 4px 12px;
+      }
+      .provenance-card, #data-age-card {
+        margin: 0 2px;
+        padding: 10px 12px;
+        font-size: 11px;
+      }
+      .material-card {
+        padding: 12px 14px;
+        border-radius: 10px;
+      }
+      .playback-fab {
+        width: 44px;
+        height: 44px;
+      }
+      .material-icons {
+        font-size: 24px;
+      }
+          .playback-label {
+      font-size: 13px;
+    }
+  }
+  
+
+  
+  .ui-root {
+    left: 370px;
+    width: calc(100vw - 370px);
+  }
+    @media (max-width: 900px) {
+      .ui-root {
+        left: 0;
+        width: 100vw;
+      }
+    }
+    .legend.material-card {
+      position: absolute;
+      top: 48px;
+      right: 24px;
+      left: auto;
+      z-index: 1000;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 4px 24px rgba(25, 118, 210, 0.10), 0 1.5px 4px rgba(0,0,0,0.04);
+      padding: 20px 24px 16px 24px;
+      max-width: 320px;
+      min-width: 240px;
+      font-family: 'Google Sans', 'Roboto', Arial, sans-serif;
+      color: #222;
+      margin: 24px 0 0 0;
+      transition: box-shadow 0.2s;
+      border: 1.5px solid #e3eaf3;
+      pointer-events: auto;
+    }
+    .legend__header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .legend__icon {
+      margin-right: 10px;
+      display: flex;
+      align-items: center;
+    }
+    .legend__title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      color: #1976d2;
+      margin: 0;
+    }
+    .legend__list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 14px 0;
+    }
+    .legend__item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 10px;
+      padding: 6px 10px;
+      border-radius: 12px;
+      transition: background 0.2s ease;
+    }
+    .legend__item:focus, .legend__item:hover {
+      background: #f5faff;
+      outline: none;
+      box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08);
+      cursor: pointer;
+    }
+    .legend__info-btn {
+      background: none;
+      border: none;
+      padding: 4px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+    }
+    .legend__info-btn:hover {
+      background: #f0f0f0;
+      transform: scale(1.1);
+    }
+    .legend__info-btn:focus {
+      outline: 2px solid #1976d2;
+      outline-offset: 2px;
+    }
+    .legend__marker {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #e3eaf3;
+      box-shadow: 0 1px 4px rgba(25, 118, 210, 0.08);
+      position: relative;
+      margin-right: 4px;
+      flex-shrink: 0;
+    }
+    .marker-sample {
+      background: linear-gradient(135deg, #ff0000, #b30000);
+      border: 3px solid #fff;
+    }
+    .marker-recent {
+      background: linear-gradient(135deg, #ffd700, #ff9900);
+      border: 3px solid #fff;
+    }
+    .spread-path-sample {
+      width: 32px;
+      height: 8px;
+      background: linear-gradient(to right, #ffe066, #ff4444);
+      border-radius: 4px;
+      margin-right: 12px;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .spread-path-sample::after {
+      content: "▶";
+      position: absolute;
+      right: -8px;
+      top: -2px;
+      font-size: 10px;
+      color: #ff4444;
+    }
+
+    .legend__marker--frp {
+      width: 28px;
+      height: 28px;
+      background: none;
+      border: none;
+      position: relative;
+      display: inline-block;
+    }
+    .legend__frp-glow {
+      position: absolute;
+      top: 0; left: 0;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      box-shadow: 0 0 12px 4px #1976d2, 0 0 0 2px #fff;
+      z-index: 1;
+      opacity: 0.85;
+      pointer-events: none;
+    }
+    .legend__frp-star {
+      position: absolute;
+      top: 2px; left: 4px;
+      font-size: 22px;
+      color: #1976d2;
+      text-shadow: 0 2px 8px #fff, 0 0 2px #1976d2;
+      z-index: 2;
+      font-weight: bold;
+      pointer-events: none;
+    }
+    .legend__marker--decreasing {
+      width: 28px;
+      height: 28px;
+      background: none;
+      border: none;
+      position: relative;
+      display: inline-block;
+    }
+    .legend__decreasing-glow {
+      position: absolute;
+      top: 0; left: 0;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      box-shadow: 0 0 12px 4px #4caf50, 0 0 0 2px #fff;
+      z-index: 1;
+      opacity: 0.85;
+      pointer-events: none;
+    }
+    .legend__decreasing-icon {
+      position: absolute;
+      top: 2px; left: 6px;
+      font-size: 20px;
+      color: #4caf50;
+      text-shadow: 0 2px 8px #fff, 0 0 2px #4caf50;
+      z-index: 2;
+      font-weight: bold;
+      pointer-events: none;
+    }
+    .legend__label {
+      font-size: 1rem;
+      color: #222;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+    }
+    .legend__subtext {
+      font-size: 0.92rem;
+      color: #666;
+      margin-left: 2px;
+    }
+    .legend__info {
+      margin: 14px 0 0 0;
+      font-size: 0.95rem;
+      color: #444;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .legend__instructions {
+      color: #1976d2;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+    .legend__updated {
+      color: #666;
+      font-size: 0.97rem;
+    }
+    .legend__times {
+      margin-top: 18px;
+      font-size: 0.97rem;
+      color: #222;
+      max-height: 120px;
+      overflow-y: auto;
+      border-top: 1px solid #e3eaf3;
+      padding-top: 10px;
+    }
+    .legend__times-list {
+      margin: 6px 0 0 16px;
+      padding: 0;
+      max-height: 90px;
+      overflow-y: auto;
+      font-variant-numeric: tabular-nums;
+    }
+    .legend__times-list li {
+      margin-bottom: 2px;
+      font-size: 0.97rem;
+      color: #444;
+    }
+    /* Tablet and smaller desktop */
+    @media (max-width: 1200px) {
+      .legend.material-card {
+        right: 20px;
+        max-width: 320px;
+        min-width: 280px;
+        padding: 24px 20px 16px 20px;
+      }
+    }
+    
+    /* Large mobile and small tablet */
+    @media (max-width: 900px) {
+      .legend.material-card {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        left: 20px;
+        max-width: none;
+        min-width: 0;
+        width: calc(100vw - 40px);
+        margin: 0;
+        padding: 20px 16px 16px 16px;
+        border-radius: 16px;
+      }
+      .legend__header { 
+        margin-bottom: 12px; 
+      }
+      .legend__item { 
+        margin-bottom: 10px; 
+        padding: 6px 8px;
+      }
+      .legend__info { 
+        margin-top: 12px; 
+      }
+      .legend__times { 
+        margin-top: 12px; 
+      }
+    }
+    
+    /* Mobile phones */
+    @media (max-width: 600px) {
+      .legend.material-card {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        width: calc(100vw - 20px);
+        padding: 16px 12px 12px 12px;
+        border-radius: 12px;
+      }
+      .legend__header { 
+        margin-bottom: 10px; 
+      }
+      .legend__title {
+        font-size: 1.1rem;
+      }
+      .legend__item { 
+        margin-bottom: 8px; 
+        padding: 4px 6px;
+        gap: 8px;
+      }
+      .legend__label {
+        font-size: 0.95rem;
+      }
+      .legend__subtext {
+        font-size: 0.85rem;
+      }
+      .legend__info { 
+        margin-top: 10px; 
+        font-size: 0.9rem;
+      }
+      .legend__times { 
+        margin-top: 10px; 
+        font-size: 0.9rem;
+      }
+      .legend__marker {
+        width: 24px;
+        height: 24px;
+      }
+      .legend__marker--frp,
+      .legend__marker--decreasing {
+        width: 24px;
+        height: 24px;
+      }
+      .legend__frp-glow,
+      .legend__decreasing-glow {
+        width: 24px;
+        height: 24px;
+      }
+      .legend__frp-star {
+        font-size: 18px;
+        top: 1px;
+        left: 3px;
+      }
+      .legend__decreasing-icon {
+        font-size: 16px;
+        top: 1px;
+        left: 4px;
+      }
+      .spread-path-sample {
+        width: 28px;
+        height: 6px;
+      }
+    }
+    
+    /* Very small mobile */
+    @media (max-width: 400px) {
+      .legend.material-card {
+        top: 5px;
+        right: 5px;
+        left: 5px;
+        width: calc(100vw - 10px);
+        padding: 12px 8px 8px 8px;
+      }
+      .legend__title {
+        font-size: 1rem;
+      }
+      .legend__item { 
+        margin-bottom: 6px; 
+        padding: 3px 4px;
+        gap: 6px;
+      }
+      .legend__label {
+        font-size: 0.9rem;
+      }
+      .legend__marker {
+        width: 20px;
+        height: 20px;
+      }
+      .legend__marker--frp,
+      .legend__marker--decreasing {
+        width: 20px;
+        height: 20px;
+      }
+      .legend__frp-glow,
+      .legend__decreasing-glow {
+        width: 20px;
+        height: 20px;
+      }
+      .legend__frp-star {
+        font-size: 16px;
+        top: 0;
+        left: 2px;
+      }
+      .legend__decreasing-icon {
+        font-size: 14px;
+        top: 0;
+        left: 3px;
+      }
+      .spread-path-sample {
+        width: 24px;
+        height: 5px;
+      }
+    }
+    /* Map action buttons */
+    .map-actions {
+      position: absolute;
+      top: 60px;
+      left: 20px;
+      z-index: 1300;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .map-action-btn {
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(10px);
+      color: #1a1a1a;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      font-size: 20px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .map-action-btn:hover {
+      background: rgba(255, 255, 255, 1);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+    .map-action-btn:active {
+      transform: translateY(0);
+    }
+    /* Info panel styling */
+    .info-panel {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      padding: 24px;
+      font-size: 14px;
+      z-index: 1100;
+      max-width: 360px;
+      color: #1a1a1a;
+      display: none;
+    }
+    
+    .info-panel h3 {
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .info-panel h3::before {
+      content: "ℹ️";
+      font-size: 20px;
+    }
+    
+    .info-panel ul {
+      margin: 16px 0;
+      padding-left: 20px;
+    }
+    
+    .info-panel li {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    
+    .info-panel a {
+      color: #4285f4;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+    
+    .info-panel a:hover {
+      color: #1a73e8;
+      text-decoration: underline;
+    }
+    
+    .info-panel-toggle {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1200;
+      background: linear-gradient(135deg, #4285f4, #1a73e8);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 56px;
+      height: 56px;
+      font-size: 24px;
+      box-shadow: 0 4px 16px rgba(66, 133, 244, 0.3);
+      cursor: pointer;
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .info-panel-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(66, 133, 244, 0.4);
+    }
+    
+    .info-panel-toggle:active {
+      transform: translateY(0);
+    }
+    
+    /* Playback controls */
+    .playback-controls {
+      position: absolute;
+      left: 50%;
+      bottom: 100px;
+      transform: translateX(-50%);
+      z-index: 1200;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-radius: 28px;
+    }
+    
+    .playback-btn {
+      background: linear-gradient(135deg, #ea4335, #d93025);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 56px;
+      height: 56px;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(234, 67, 53, 0.3);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .playback-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(234, 67, 53, 0.4);
+    }
+    
+    .playback-btn:active {
+      transform: translateY(0);
+    }
+    
+    #playbackStatus {
+      font-size: 15px;
+      font-weight: 500;
+      color: #1a1a1a;
+      white-space: nowrap;
+    }
+    
+    /* Time slider */
+    .time-slider-container {
+      position: absolute;
+      left: 50%;
+      bottom: 40px;
+      transform: translateX(-50%);
+      z-index: 1200;
+      padding: 16px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 280px;
+      border-radius: 20px;
+    }
+    
+    .time-slider {
+      width: 240px;
+      height: 6px;
+      border-radius: 3px;
+      background: #e0e0e0;
+      outline: none;
+      -webkit-appearance: none;
+      margin: 0 8px;
+    }
+    
+    .time-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4285f4, #1a73e8);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+      transition: all 0.2s ease;
+    }
+    
+    .time-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
+    }
+    
+    .time-slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4285f4, #1a73e8);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+    }
+    
+    .time-slider-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1a1a1a;
+      margin-top: 8px;
+    }
+    
+    /* Provenance */
+    .provenance {
+      position: absolute;
+      top: 90px;
+      left: 20px;
+      right: auto;
+      bottom: auto;
+      z-index: 1200;
+      padding: 16px 20px;
+      font-size: 13px;
+      color: #1a1a1a;
+      max-width: 360px;
+      border-radius: 12px;
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+    
+    .provenance h4 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .provenance h4::before {
+      content: "📊";
+      font-size: 16px;
+    }
+    
+    .provenance a { 
+      color: #4285f4; 
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+    
+    .provenance a:hover {
+      color: #1a73e8;
+      text-decoration: underline;
+    }
+    
+    /* Map action buttons */
+    .map-actions {
+      position: absolute;
+      top: 60px;
+      left: 20px;
+      z-index: 1300;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .map-action-btn {
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(10px);
+      color: #1a1a1a;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      font-size: 20px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .map-action-btn:hover {
+      background: rgba(255, 255, 255, 1);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+    
+    .map-action-btn:active {
+      transform: translateY(0);
+    }
+    
+    /* Modal styling */
+    .about-modal {
+      display: none;
+      position: fixed;
+      left: 0; 
+      top: 0; 
+      width: 100vw; 
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(4px);
+      z-index: 2000;
+      align-items: center; 
+      justify-content: center;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .about-modal-content {
+      background: #fff;
+      border-radius: 20px;
+      padding: 32px 28px;
+      max-width: 480px;
+      margin: 40px auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      font-size: 15px;
+      color: #1a1a1a;
+      position: relative;
+      animation: slideUp 0.3s ease;
+    }
+    
+    @keyframes slideUp {
+      from { 
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .about-modal h3 {
+      margin: 0 0 20px 0;
+      font-size: 24px;
+      font-weight: 600;
+      color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .about-modal h3::before {
+      content: "🌍";
+      font-size: 28px;
+    }
+    
+    .about-modal ul {
+      margin: 20px 0;
+      padding-left: 24px;
+    }
+    
+    .about-modal li {
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
+    
+    .about-modal-close {
+      position: absolute;
+      top: 16px; 
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 28px;
+      color: #666;
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+    
+    .about-modal-close:hover {
+      background: rgba(0, 0, 0, 0.05);
+      color: #1a1a1a;
+    }
+    
+    /* Responsive design for modals and controls */
+    @media (max-width: 768px) {
+      .info-panel { 
+        font-size: 13px; 
+        max-width: 95vw; 
+        padding: 20px; 
+        bottom: 10px;
+        right: 10px;
+      }
+      
+      .info-panel-toggle { 
+        width: 48px; 
+        height: 48px; 
+        font-size: 20px; 
+        bottom: 10px;
+        right: 10px;
+      }
+      
+      .playback-controls { 
+        padding: 12px 20px; 
+        bottom: 80px;
+      }
+      
+      .playback-btn { 
+        width: 48px; 
+        height: 48px; 
+        font-size: 20px; 
+      }
+      
+      .time-slider-container { 
+        padding: 12px 20px; 
+        min-width: 200px; 
+        bottom: 30px;
+      }
+      
+      .time-slider { 
+        width: 160px; 
+      }
+      
+      .provenance { 
+        font-size: 12px; 
+        max-width: 90vw; 
+        padding: 12px 16px; 
+        left: 10px;
+        bottom: 10px;
+        top: 80px;
+        right: auto;
+      }
+      
+      .about-modal-content { 
+        font-size: 14px; 
+        max-width: 95vw; 
+        padding: 24px 20px; 
+        margin: 20px;
+      }
+      
+      .map-action-btn { 
+        width: 44px; 
+        height: 44px; 
+        font-size: 18px; 
+        top: 10px;
+        left: 10px;
+      }
+      
+      .map-actions {
+        top: 10px;
+        left: 10px;
+        gap: 8px;
+      }
+      
+      /* Log modal responsive */
+      .log-modal {
+        width: 90vw;
+        height: 80vh;
+        border-radius: 18px 18px 0 0;
+      }
+      
+      .log-modal pre {
+        font-size: 13px;
+        padding: 16px 18px;
+      }
+      
+      /* Floating buttons responsive */
+      .log-panel-toggle {
+        width: 56px;
+        height: 56px;
+        font-size: 28px;
+        bottom: 24px;
+        right: 24px;
+      }
+    }
+    
+    /* Mobile responsive for modals */
+    @media (max-width: 600px) {
+      .about-modal-content { 
+        font-size: 13px; 
+        max-width: 98vw; 
+        padding: 20px 16px; 
+        margin: 10px;
+        max-height: 85vh;
+      }
+      
+      .about-modal h3 {
+        font-size: 18px;
+        margin-bottom: 12px;
+      }
+      
+      .about-modal ul {
+        margin: 8px 0 12px 16px;
+      }
+      
+      .about-modal li {
+        margin-bottom: 6px;
+        line-height: 1.4;
+      }
+      
+      .info-panel-toggle { 
+        width: 44px; 
+        height: 44px; 
+        font-size: 18px; 
+        bottom: 8px;
+        right: 8px;
+      }
+      
+      .playback-controls { 
+        padding: 10px 16px; 
+        bottom: 70px;
+      }
+      
+      .playback-btn { 
+        width: 44px; 
+        height: 44px; 
+        font-size: 18px; 
+      }
+      
+      .time-slider-container { 
+        padding: 10px 16px; 
+        min-width: 180px; 
+        bottom: 25px;
+      }
+      
+      .time-slider { 
+        width: 140px; 
+      }
+      
+      /* Log modal responsive */
+      .log-modal {
+        width: 95vw;
+        height: 75vh;
+        border-radius: 16px 16px 0 0;
+      }
+      
+      .log-modal pre {
+        font-size: 12px;
+        padding: 14px 16px;
+      }
+      
+      /* Floating buttons responsive */
+      .log-panel-toggle {
+        width: 52px;
+        height: 52px;
+        font-size: 26px;
+        bottom: 20px;
+        right: 20px;
+      }
+    }
+    
+    /* Very small mobile */
+    @media (max-width: 400px) {
+      .about-modal-content { 
+        font-size: 12px; 
+        max-width: 98vw; 
+        padding: 16px 12px; 
+        margin: 5px;
+        max-height: 90vh;
+      }
+      
+      .about-modal h3 {
+        font-size: 16px;
+        margin-bottom: 10px;
+      }
+      
+      .about-modal ul {
+        margin: 6px 0 10px 14px;
+      }
+      
+      .about-modal li {
+        margin-bottom: 4px;
+        line-height: 1.3;
+      }
+      
+      .info-panel-toggle { 
+        width: 40px; 
+        height: 40px; 
+        font-size: 16px; 
+        bottom: 5px;
+        right: 5px;
+      }
+      
+      .playback-controls { 
+        padding: 8px 12px; 
+        bottom: 60px;
+      }
+      
+      .playback-btn { 
+        width: 40px; 
+        height: 40px; 
+        font-size: 16px; 
+      }
+      
+      .time-slider-container { 
+        padding: 8px 12px; 
+        min-width: 160px; 
+        bottom: 20px;
+      }
+      
+      .time-slider { 
+        width: 120px; 
+      }
+      
+      /* Log modal responsive */
+      .log-modal {
+        width: 98vw;
+        height: 70vh;
+        border-radius: 12px 12px 0 0;
+      }
+      
+      .log-modal pre {
+        font-size: 11px;
+        padding: 12px 14px;
+      }
+      
+      /* Floating buttons responsive */
+      .log-panel-toggle {
+        width: 48px;
+        height: 48px;
+        font-size: 24px;
+        bottom: 16px;
+        right: 16px;
+      }
+    }
+    
+    /* Focus states for accessibility */
+    .map-action-btn:focus,
+    .playback-btn:focus,
+    .info-panel-toggle:focus,
+    .about-modal-close:focus {
+      outline: 2px solid #4285f4;
+      outline-offset: 2px;
+    }
+    
+    .time-slider:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.3);
+    }
+
+    /* Add engineering style for the slider in <style> */
+    .engineering-slider {
+      width: 98%;
+      height: 8px;
+      background: repeating-linear-gradient(90deg, #b0b0b0 0, #b0b0b0 2px, #e0e0e0 2px, #e0e0e0 10px);
+      border-radius: 2px;
+      outline: none;
+      margin: 0 1%;
+      -webkit-appearance: none;
+      appearance: none;
+      box-shadow: 0 1px 2px #bbb inset;
+    }
+    .engineering-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 2px;
+      background: #1976d2;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 6px #1976d2aa;
+      cursor: pointer;
+    }
+    .engineering-slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 2px;
+      background: #1976d2;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 6px #1976d2aa;
+      cursor: pointer;
+    }
+    .engineering-ticks {
+      display: flex;
+      justify-content: space-between;
+      margin: 0 1%;
+      font-size: 11px;
+      color: #444;
+      letter-spacing: 0.5px;
+      user-select: none;
+    }
+    /* Apple-style floating panel for all top-left controls */
+    .floating-panel {
+      position: absolute;
+      top: 180px;
+      left: 32px;
+      z-index: 1300;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      width: 350px;
+      max-width: 95vw;
+      padding: 0;
+      background: none;
+      box-shadow: none;
+    }
+    .floating-panel .apple-play-btn {
+      width:54px;
+      height:54px;
+      border-radius:50%;
+      background:linear-gradient(135deg,#f44336,#ff9800);
+      box-shadow:0 2px 8px #f4433622;
+      border:none;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition:box-shadow 0.2s;
+    }
+    .floating-panel .apple-play-btn:hover, .floating-panel .apple-play-btn:focus {
+      box-shadow:0 4px 16px #f4433640;
+      outline:none;
+    }
+    .floating-panel .apple-slider {
+      -webkit-appearance:none;
+      appearance:none;
+      width:100%;
+      height:6px;
+      border-radius:3px;
+      background:#e0e0e0;
+      box-shadow:0 1px 2px #bbb inset;
+      outline:none;
+      margin:0;
+    }
+    .floating-panel .apple-slider::-webkit-slider-thumb {
+      -webkit-appearance:none;
+      appearance:none;
+      width:22px;
+      height:22px;
+      border-radius:50%;
+      background:#1976d2;
+      border:3px solid #fff;
+      box-shadow:0 2px 8px #1976d2aa;
+      cursor:pointer;
+      transition:box-shadow 0.2s;
+    }
+    .floating-panel .apple-slider:focus::-webkit-slider-thumb {
+      box-shadow:0 0 0 4px #1976d233;
+    }
+    .floating-panel .apple-slider::-moz-range-thumb {
+      width:22px;
+      height:22px;
+      border-radius:50%;
+      background:#1976d2;
+      border:3px solid #fff;
+      box-shadow:0 2px 8px #1976d2aa;
+      cursor:pointer;
+    }
+    .floating-panel .apple-ticks {
+      display:flex;
+      justify-content:space-between;
+      font-size:12px;
+      color:#888;
+      user-select:none;
+      letter-spacing:0.5px;
+      margin:0 2px;
+    }
+    .floating-panel .time-slider-label {
+      text-align:center;
+      font-size:15px;
+      font-weight:500;
+      color:#333;
+      margin-top:8px;
+    }
+    .floating-panel .provenance {
+      background:none;
+      box-shadow:none;
+      padding:0;
+      margin:0;
+      font-size:14px;
+    }
+    .floating-panel .provenance h4 {
+      margin:0 0 8px 0;
+      font-size:14px;
+      font-weight:600;
+      color:#1a1a1a;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .floating-panel .provenance h4::before {
+      content:"📊";
+      font-size:16px;
+    }
+    .floating-panel .provenance a {
+      color:#4285f4;
+      text-decoration:none;
+      font-weight:500;
+      transition:color 0.2s ease;
+    }
+    .floating-panel .provenance a:hover {
+      color:#1a73e8;
+      text-decoration:underline;
+    }
+    .floating-panel .provenance ul {
+      margin:0;
+      padding-left:0;
+    }
+    .floating-panel .provenance li {
+      margin-bottom:0;
+      line-height:1.5;
+    }
+    .floating-panel .provenance p {
+      margin-top:0;
+      margin-bottom:0;
+    }
+    .floating-panel .provenance .provenance-content {
+      margin-top:0;
+      margin-bottom:0;
+    }
+    .material-card {
+      background: rgba(255,255,255,0.98);
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
+      padding: 24px 24px 18px 24px;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .playback-card {
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 24px;
+    }
+    .slider-card {
+      padding: 18px 24px 12px 24px;
+    }
+    /* Style for the Recent Fire Detection Times card to be scrollable and reduced in height */
+    #legend-detection-times {
+      max-height: 180px;
+      overflow-y: auto;
+      background: rgba(248,249,250,0.7);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      margin-top: 18px;
+    }
+    .legend.material-card {
+      text-align: left;
+      align-items: flex-start;
+    }
+    @media (max-width: 900px) {
+      .ui-root, .floating-panel {
+        right: 2vw;
+        width: 98vw;
+        max-width: 98vw;
+      }
+      .floating-panel {
+        margin-right: 2vw;
+      }
+    }
+    .sidebar-status {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 320px;
+      min-width: 220px;
+      max-width: 90vw;
+      height: 100vh;
+      background: #fff;
+      box-shadow: 2px 0 24px rgba(0,0,0,0.10);
+      z-index: 1400;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      padding: 0;
+      border-right: 1px solid #e0e0e0;
+      pointer-events: auto;
+    }
+    .sidebar-status-content {
+      margin: 48px 0 0 0;
+      padding: 32px 28px 24px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 18px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .sidebar-status .status-icon {
+      font-size: 38px;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .sidebar-status .status-success {
+      color: #388e3c;
+    }
+    .sidebar-status .status-error {
+      color: #d32f2f;
+    }
+    .sidebar-status .status-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .sidebar-status .status-time {
+      font-size: 14px;
+      color: #444;
+      margin-bottom: 0;
+    }
+    .sidebar-status .status-message {
+      font-size: 15px;
+      color: #d32f2f;
+      margin-top: 8px;
+      font-weight: 500;
+      word-break: break-word;
+    }
+    @media (max-width: 900px) {
+      .sidebar-status {
+        width: 98vw;
+        min-width: 0;
+        max-width: 98vw;
+        padding: 0;
+      }
+      .sidebar-status-content {
+        padding: 18px 10px 10px 18px;
+      }
+    }
+    .ui-root {
+      left: 320px;
+      width: calc(100vw - 320px);
+    }
+    @media (max-width: 900px) {
+      .ui-root {
+        left: 0;
+        width: 100vw;
+      }
+    }
+    .sidebar-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      padding: 0 0 32px 0;
+      align-items: stretch;
+      width: 100%;
+    }
+    .material-card {
+      margin-left: 32px;
+      margin-right: 32px;
+    }
+    @media (max-width: 900px) {
+      .sidebar-status, .sidebar-cards, .material-card {
+        margin-left: 0;
+        margin-right: 0;
+        padding-left: 0;
+        padding-right: 0;
+      }
+      .sidebar-cards {
+        gap: 14px;
+        padding: 0 0 18px 0;
+      }
+      .material-card {
+        margin: 0 8px;
+      }
+    }
+    .material-elevated {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 4px 16px rgba(60,64,67,0.10), 0 1.5px 4px rgba(60,64,67,0.06);
+      padding: 14px 24px;
+      margin: 0;
+    }
+    .playback-fab {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1976d2 60%, #42a5f5 100%);
+      box-shadow: 0 2px 8px #1976d233;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: box-shadow 0.18s, background 0.18s;
+      cursor: pointer;
+      outline: none;
+      position: relative;
+      overflow: hidden;
+    }
+    .playback-fab:focus-visible {
+      box-shadow: 0 0 0 4px #1976d244, 0 2px 8px #1976d233;
+    }
+    .playback-fab:active {
+      background: linear-gradient(135deg, #1565c0 60%, #1976d2 100%);
+    }
+    .material-icons {
+      color: #fff;
+      font-size: 32px;
+      user-select: none;
+    }
+    .playback-label {
+      font-size: 16px;
+      font-weight: 500;
+      color: #1976d2;
+      letter-spacing: 0.01em;
+      margin-left: 8px;
+      user-select: none;
+    }
+    .legend__marker--decreasing {
+      width: 28px;
+      height: 28px;
+      background: none;
+      border: none;
+      position: relative;
+      display: inline-block;
+    }
+    .legend__decreasing-glow {
+      position: absolute;
+      top: 0; left: 0;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      box-shadow: 0 0 12px 4px #4caf50, 0 0 0 2px #fff;
+      z-index: 1;
+      opacity: 0.85;
+      pointer-events: none;
+    }
+    .legend__decreasing-icon {
+      position: absolute;
+      top: 2px; left: 6px;
+      font-size: 20px;
+      color: #4caf50;
+      text-shadow: 0 2px 8px #fff, 0 0 2px #4caf50;
+      z-index: 2;
+      font-weight: bold;
+      pointer-events: none;
+    }
+    /* Add to CSS */
+    .legend__item--inactive {
+      opacity: 0.4;
+      filter: grayscale(1);
+      pointer-events: auto;
+    }
+    .legend__marker--radius {
+      width: 28px;
+      height: 28px;
+      background: none;
+      border: none;
+      position: relative;
+      display: inline-block;
+    }
+    .legend__radius-circle {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: rgba(255, 0, 0, 0.08);
+      border: 1px solid #ff0000;
+      position: relative;
+      margin-right: 4px;
+      flex-shrink: 0;
+    }
+    .legend__radius-hotspot {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ff0000;
+      border: 1px solid #fff;
+      box-shadow: 0 0 4px rgba(255, 0, 0, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <div id="map" role="region" aria-label="Fires and Explosions Map of Gaza"></div>
+  <div class="sidebar-unified">
+    <div class="sidebar-status-banner" id="sidebarStatusBanner">
+      <!-- Status banner will be injected here -->
+    </div>
+    <div class="material-card" style="background:#fff8e1;border-left:3px solid #ff9800;padding:12px 16px;margin:12px 16px;font-size:13px;color:#555;">
+      <div style="font-weight:600;color:#1976d2;margin-bottom:6px;">Humanitarian Context</div>
+      <div style="line-height:1.4;">Open-source analysis of satellite-detected fires and explosions over Gaza.</div>
+    </div>
+    <div class="sidebar-content">
+      <div class="sidebar-section" id="sidebarControls">
+        <div class="sidebar-header">Controls</div>
+        <div class="model-toggle">
+          <button class="model-toggle-btn active" id="viirsBtn" aria-label="Show VIIRS Data">VIIRS</button>
+          <button class="model-toggle-btn" id="modisBtn" aria-label="Show MODIS Data">MODIS</button>
+          <span id="currentModelLabel">Currently: VIIRS</span>
+        </div>
+        <div class="material-card" style="padding:12px 14px; display:grid; grid-template-columns: 1fr; gap:10px;">
+          <label style="font-size:12px;color:#1976d2;font-weight:600;">Date Range</label>
+          <input type="datetime-local" id="fromInput" aria-label="From datetime">
+          <input type="datetime-local" id="toInput" aria-label="To datetime">
+          <div style="display:flex; gap:12px; align-items:center;">
+            <label style="font-size:13px; display:flex; align-items:center; gap:6px;">
+              <input type="checkbox" id="filterExplosion" checked>
+              Explosion
+            </label>
+            <label style="font-size:13px; display:flex; align-items:center; gap:6px;">
+              <input type="checkbox" id="filterFire" checked>
+              Fire
+            </label>
+          </div>
+          <button id="applyFiltersBtn" class="model-toggle-btn active" style="align-self:start; padding:8px 16px;">Apply Filters</button>
+        </div>
+        <div class="playback-card material-elevated">
+          <button class="playback-fab" id="playPauseBtn" title="Replay Last 10 Days" aria-label="Replay Last 10 Days" tabindex="0">
+            <span class="material-icons" id="playPauseIcon" style="font-size:32px;">play_arrow</span>
+          </button>
+          <span id="playbackStatus" class="playback-label">Replay Last 10 Days</span>
+        </div>
+        <div class="slider-card">
+          <input type="range" min="0" max="0" value="0" class="engineering-slider" id="timeSlider" aria-label="Time Slider" tabindex="0">
+          <div class="engineering-ticks" id="sliderTicks"></div>
+          <div class="time-slider-label" id="timeSliderLabel">Time: --</div>
+        </div>
+      </div>
+      <div class="sidebar-section" id="sidebarInfo">
+        <div class="sidebar-header">Info</div>
+        <div id="fetchStatusCard" class="material-card" style="margin-bottom:18px;"></div>
+        <div class="material-card" style="margin-bottom:18px; padding: 18px 20px;">
+          <h4 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #1a1a1a;">Satellite Fire Detection Accuracy</h4>
+          <div style="font-size: 13px; line-height: 1.5; color: #444;">
+            • Each point is a NASA VIIRS hotspot detected from space.<br>
+            • Location accuracy: typically within 375m (VIIRS pixel size).<br>
+            • <b>FRP</b> (Fire Radiative Power) estimates fire intensity in megawatts (MW); higher FRP means a hotter, more intense fire.<br>
+            • "Confidence" is a NASA-provided estimate of detection reliability.<br>
+            • <b>Wind direction</b> (if available) shows the prevailing wind at the time of detection.<br>
+            • <b>Risk Buffer</b>: Red shaded circles show 1km at-risk zones around each hotspot.<br>
+            • False positives are rare but possible (e.g., industrial heat, volcanoes).<br>
+            • Data updates every 15 minutes.
+          </div>
+        </div>
+        <div class="material-card" id="data-age-card"></div>
+        <div class="provenance-card" aria-label="Data Provenance and Quality" role="region">
+          NASA FIRMS API<br>
+          Bounding box: 35.0,35.0,36.0,36.0 <br>
+          Product: VIIRS_SNPP_NRT <br>
+          Days: 10<br>
+          Each hotspot shows confidence and timestamp in its popup.
+        </div>
+        <div class="material-card" style="background:#f7fafd;font-size:13px;color:#1976d2;margin-top:10px;padding:10px 16px 8px 16px;border-left:3px solid #1976d2;box-shadow:0 1px 4px #1976d211;">
+          <span style="font-weight:600;">Fire data is updated every 10 minutes (VIIRS & MODIS).</span>
+        </div>
++       <div class="material-card" style="background:#f7fafd;font-size:13px;color:#1976d2;margin-top:10px;padding:10px 16px 8px 16px;border-left:3px solid #1976d2;box-shadow:0 1px 4px #1976d211;">
++         <span style="font-weight:600;">Fire data is updated every 10 minutes (VIIRS & MODIS).</span>
++       </div>
+      </div>
+    </div>
+  </div>
+  <div class="ui-root">
+    <section class="legend material-card" title="Legend: What do the map symbols mean?" role="region" aria-label="Map Legend">
+      <header class="legend__header">
+        <span class="legend__icon" aria-hidden="true">
+          <svg width="24" height="24" fill="none"><circle cx="12" cy="12" r="10" fill="#1976d2" opacity="0.12"/><path d="M7 12h10M12 7v10" stroke="#1976d2" stroke-width="2" stroke-linecap="round"/></svg>
+        </span>
+        <h3 class="legend__title">Map Legend</h3>
+      </header>
+      <ul class="legend__list">
+        <li class="legend__item" data-layer="current">
+          <span class="legend__marker marker-sample" title="Current Hotspot" aria-label="Current Hotspot"></span>
+          <span class="legend__label"><b>Current Hotspot</b></span>
+          <button class="legend__info-btn" id="currentHotspotInfoBtn" title="Current Hotspot Info" aria-label="Show Current Hotspot Info">
+            <span class="material-icons" style="font-size: 16px; color: #666;">info</span>
+          </button>
+        </li>
+        <li class="legend__item" data-layer="recent">
+          <span class="legend__marker marker-recent" title="Most Recent Hotspot" aria-label="Most Recent Hotspot"></span>
+          <span class="legend__label"><b>Most Recent Hotspot</b></span>
+          <button class="legend__info-btn" id="recentHotspotInfoBtn" title="Most Recent Hotspot Info" aria-label="Show Most Recent Hotspot Info">
+            <span class="material-icons" style="font-size: 16px; color: #666;">info</span>
+          </button>
+        </li>
+        <li class="legend__item" data-layer="spread">
+          <span class="legend__marker spread-path-sample" title="Spread Path" aria-label="Spread Path"></span>
+          <span class="legend__label"><b>Spread Path</b> <span class="legend__subtext">(last 24 hrs)</span></span>
+          <button class="legend__info-btn" id="spreadPathInfoBtn" title="Spread Path Info" aria-label="Show Spread Path Info">
+            <span class="material-icons" style="font-size: 16px; color: #666;">info</span>
+          </button>
+        </li>
+        <li class="legend__item" data-layer="frp">
+          <span class="legend__marker legend__marker--frp" title="Highest FRP detected" aria-label="Highest FRP detected">
+            <span class="legend__frp-glow"></span>
+            <span class="legend__frp-star">★</span>
+          </span>
+          <span class="legend__label"><b>Highest FRP detected</b></span>
+          <button class="legend__info-btn" id="highestFrpInfoBtn" title="Highest FRP Info" aria-label="Show Highest FRP Info">
+            <span class="material-icons" style="font-size: 16px; color: #666;">info</span>
+          </button>
+        </li>
+        <li class="legend__item" data-layer="decreasing">
+          <span class="legend__marker legend__marker--decreasing" title="Decreasing FRP (fire dying out)" aria-label="Decreasing FRP">
+            <span class="legend__decreasing-glow"></span>
+            <span class="legend__decreasing-icon">↓</span>
+          </span>
+          <span class="legend__label"><b>Decreasing FRP</b> <span class="legend__subtext">(fire dying out)</span></span>
+          <button class="legend__info-btn" id="decreasingFrpInfoBtn" title="Decreasing FRP Info" aria-label="Show Decreasing FRP Info">
+            <span class="material-icons" style="font-size: 16px; color: #666;">info</span>
+          </button>
+        </li>
+        <li class="legend__item" data-layer="radius">
+          <span class="legend__marker legend__marker--radius" title="Risk Buffer (1km radius)" aria-label="Risk Buffer">
+            <span class="legend__radius-circle"></span>
+            <span class="legend__radius-hotspot"></span>
+          </span>
+          <span class="legend__label"><b>Risk Buffer</b> <span class="legend__subtext">(1km radius)</span></span>
+          <button class="legend__info-btn" id="riskBufferInfoBtn" title="Risk Buffer Analysis" aria-label="Show Risk Buffer Analysis">
+            <span class="material-icons" style="font-size: 16px; color: #666;">info</span>
+          </button>
+        </li>
+      </ul>
+      <div class="legend__info">
+        <div class="legend__instructions">
+          <b>Tap</b> a hotspot for details.<br>
+          <b>Pinch/Zoom</b> to explore.
+        </div>
+        <div class="legend__updated">
+          <b>Last Updated:</b> <span id="last-updated">--:--</span> UTC+3
+        </div>
+      </div>
+      <div id="legend-detection-times" class="legend__times">
+        <b>Recent Fire Detection Times<br>(Syria Time, UTC+3)</b>
+        <ul class="legend__times-list">
+          <!-- List items dynamically inserted here -->
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <button class="info-panel-toggle material-card" id="infoToggle" title="Show project info" aria-label="Show project info" tabindex="0">ℹ</button>
+
+  <div class="about-modal" id="aboutModal" role="dialog" aria-modal="true" aria-label="About This Map">
+    <div class="about-modal-content">
+      <button class="about-modal-close" id="aboutCloseBtn" title="Close" aria-label="Close">×</button>
+      <h3>About This Gaza Fires vs Explosions Map</h3>
+      <ul>
+        <li>Shows recent thermal anomalies over Gaza, classified as likely <b>fire</b> or <b>explosion</b>.</li>
+        <li>Data from NASA FIRMS (VIIRS/MODIS), refreshed periodically.</li>
+        <li>Tap any hotspot for details: time, intensity, confidence, wind, and more.</li>
+        <li>Use the time slider and playback to explore fire movement over the last 10 days.</li>
+        <li>Toggle roads and populated places for risk context.</li>
+        <li>For emergencies, follow local authority instructions.</li>
+      </ul>
+      <div style="font-size:13px;color:#666;padding:12px;background:rgba(248,249,250,0.6);border-radius:8px;margin-top:16px;">
+        <b>Detection Limit:</b> Fires must be at least ~375m across to be detected.<br>
+        <b>Limitations:</b> Cloud cover, smoke, or terrain may hide fires. False positives are rare but possible (e.g., factories, volcanoes).<br>
+        <b>Recommended Actions:</b> Follow local evacuation orders. See <a href="#" style="color:#4285f4;">shelter locations</a> and <a href="#" style="color:#4285f4;">emergency contacts</a>.<br>
+        <b>Data Provenance:</b> NASA FIRMS API<br>
+        This map is for situational awareness only. For emergencies, call your local authorities.
+      </div>
+    </div>
+  </div>
+  <!-- NASA Data Info Modal -->
+  <div class="about-modal" id="nasaInfoModal" role="dialog" aria-modal="true" aria-label="About NASA VIIRS Fire Data">
+    <div class="about-modal-content" style="max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+      <button class="about-modal-close" id="nasaInfoCloseBtn" title="Close" aria-label="Close">×</button>
+      <h3>About NASA VIIRS Fire Data</h3>
+      <div style="flex:1; overflow-y: auto; padding: 0 2px 0 0; margin-bottom:12px; font-size:14px; color:#222; border-radius: 10px; padding-left: 8px; padding-right: 8px;">
+        <b>Latency:</b><br>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li>Global data: <b>within 3 hours</b> of satellite observation</li>
+          <li>Ultra/real-time (US/Canada): <b>1–30 minutes</b></li>
+        </ul>
+        <b>What is VIIRS?</b><br>
+        The Visible Infrared Imaging Radiometer Suite (VIIRS) detects active fires and thermal anomalies (e.g., wildfires, volcanoes, gas flares) at <b>375m resolution</b>. It provides improved detection of small fires and better mapping of large fire perimeters, especially at night.<br><br>
+        <b>Satellites:</b> Suomi NPP (S-NPP), NOAA-20 (JPSS-1), NOAA-21 (JPSS-2). These provide 3–4 observations per day in mid-latitudes.<br><br>
+        <b>Key Attributes:</b>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><b>Latitude/Longitude:</b> Center of the 375m fire pixel</li>
+          <li><b>Brightness:</b> Temperature of the fire pixel (Kelvin)</li>
+          <li><b>Acq_Date/Acq_Time:</b> Date and UTC time of detection</li>
+          <li><b>Confidence:</b> Quality of detection (low, nominal, high)</li>
+          <li><b>FRP:</b> Fire Radiative Power (megawatts, MW)</li>
+          <li><b>DayNight:</b> D = Daytime, N = Nighttime</li>
+        </ul>
+        <b>Confidence Levels:</b><br>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><b>Low (l):</b> Possible false alarms (e.g., sun glint, low anomaly)</li>
+          <li><b>Nominal (n):</b> Reliable detection</li>
+          <li><b>High (h):</b> Very reliable, saturated pixels</li>
+        </ul>
+        <b>Version:</b> Indicates data processing type:<br>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><b>URT</b> = Ultra Real-Time</li>
+          <li><b>RT</b> = Real-Time</li>
+          <li><b>NRT</b> = Near Real-Time</li>
+          <li>(no suffix) = Standard</li>
+        </ul>
+        <b>Limitations:</b><br>
+        Cloud cover, terrain, or satellite overpass timing may delay or prevent detection. Not all fires are detected instantly; some may appear hours after ignition.
+      </div>
+      <div style="font-size:13px;color:#666; padding: 8px 8px 0 8px;">For more details, see <a href="https://firms.modaps.eosdis.nasa.gov/active_fire/viirs/viirs-nrt/" target="_blank" style="color:#4285f4;">NASA FIRMS VIIRS Fire Data</a>.</div>
+    </div>
+  </div>
+  <!-- Risk Buffer Analysis Modal -->
+  <div class="about-modal" id="riskBufferModal" role="dialog" aria-modal="true" aria-label="Risk Buffer Analysis">
+    <div class="about-modal-content" style="max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+      <button class="about-modal-close" id="riskBufferCloseBtn" title="Close" aria-label="Close">×</button>
+      <h3>Risk Buffer Analysis</h3>
+      <div style="flex:1; overflow-y: auto; padding: 0 2px 0 0; margin-bottom:12px; font-size:14px; color:#222; border-radius: 10px; padding-left: 8px; padding-right: 8px;">
+        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #1976d2;">
+          <strong>Decision:</strong> Maintain 1km radius for risk buffer zones around fire hotspots.<br>
+          <strong>Reasoning:</strong> While NASA VIIRS data has a 375m sensor resolution, a 1km buffer provides optimal safety margin for wildfire early-warning systems.
+        </div>
+        
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">NASA VIIRS Data Specifications</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Sensor Resolution:</strong> 375m</li>
+          <li><strong>Imagery Resolution:</strong> 250m</li>
+          <li><strong>Thermal Anomaly Representation:</strong> Red points at approximate center of 375m pixels</li>
+          <li><strong>Temporal Resolution:</strong> Twice daily observations</li>
+          <li><strong>Spatial Accuracy:</strong> Improved mapping of large fire perimeters and small area fires</li>
+        </ul>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">Risk Buffer Considerations</h4>
+        
+        <h5 style="color: #666; margin: 16px 0 8px 0;">Why 375m Would Be Technically Accurate</h5>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li>Matches the actual VIIRS sensor pixel size</li>
+          <li>Represents the precise area of fire detection</li>
+          <li>Aligns with NASA's data resolution specifications</li>
+        </ul>
+
+        <h5 style="color: #666; margin: 16px 0 8px 0;">Why 1km Provides Better Operational Value</h5>
+        <ol style="margin: 8px 0 12px 18px;">
+          <li><strong>Safety Margin:</strong> Fire spread can extend beyond immediate detection pixels</li>
+          <li><strong>Emergency Planning:</strong> Provides adequate buffer for evacuation planning</li>
+          <li><strong>Real-world Conditions:</strong> Accounts for wind, terrain, and fire behavior variations</li>
+          <li><strong>Early Warning System:</strong> Conservative approach ensures public safety</li>
+          <li><strong>Response Time:</strong> Gives emergency services sufficient notice and area coverage</li>
+        </ol>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">Implementation</h4>
+        <p>The risk buffer is implemented as:</p>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Radius:</strong> 1,000 meters (1km)</li>
+          <li><strong>Visual Style:</strong> Red translucent circles around each hotspot</li>
+          <li><strong>Interactive:</strong> Toggleable via legend controls</li>
+          <li><strong>Real-time:</strong> Updates with new fire data</li>
+        </ul>
+
+        <div style="background: #e8f5e8; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #4caf50;">
+          <strong>Conclusion:</strong> While 375m represents the technical accuracy of NASA's VIIRS data, the 1km risk buffer radius provides the optimal balance between scientific precision and operational safety for wildfire early-warning systems. This conservative approach ensures maximum protection for communities while maintaining the system's scientific foundation.
+        </div>
+      </div>
+      <div style="font-size:13px;color:#666; padding: 8px 8px 0 8px;">This analysis is based on NASA FIRMS VIIRS data specifications and wildfire management best practices.</div>
+    </div>
+  </div>
+  <!-- Current Hotspot Info Modal -->
+  <div class="about-modal" id="currentHotspotModal" role="dialog" aria-modal="true" aria-label="Current Hotspot Information">
+    <div class="about-modal-content" style="max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+      <button class="about-modal-close" id="currentHotspotCloseBtn" title="Close" aria-label="Close">×</button>
+      <h3>Current Hotspot Information</h3>
+      <div style="flex:1; overflow-y: auto; padding: 0 2px 0 0; margin-bottom:12px; font-size:14px; color:#222; border-radius: 10px; padding-left: 8px; padding-right: 8px;">
+        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #ff0000;">
+          <strong>Definition:</strong> Red circular markers represent active fire hotspots detected by NASA VIIRS satellites.<br>
+          <strong>Time Range:</strong> Detections from the last 24 hours that are not the most recent.
+        </div>
+        
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">Visual Characteristics</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Color:</strong> Red gradient (#ff0000 to #b30000)</li>
+          <li><strong>Size:</strong> 8px radius (smaller than most recent)</li>
+          <li><strong>Border:</strong> Dark red outline for visibility</li>
+          <li><strong>Opacity:</strong> 95% fill opacity for clear visibility</li>
+        </ul>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">Data Significance</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Active Fires:</strong> These represent fires that are still burning</li>
+          <li><strong>Fire History:</strong> Shows the progression of fire activity over time</li>
+          <li><strong>Risk Assessment:</strong> Helps identify areas with ongoing fire activity</li>
+          <li><strong>Emergency Response:</strong> Critical for evacuation and firefighting decisions</li>
+        </ul>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">How to Use</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Click:</strong> Tap any red hotspot for detailed information</li>
+          <li><strong>Time Analysis:</strong> Compare with most recent hotspots to see fire progression</li>
+          <li><strong>Risk Assessment:</strong> Use with risk buffer zones for safety planning</li>
+          <li><strong>Toggle:</strong> Use legend control to show/hide current hotspots</li>
+        </ul>
+
+        <div style="background: #fff3e0; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #ff9800;">
+          <strong>Note:</strong> Current hotspots represent active fire activity. Always follow local emergency instructions and evacuation orders when fires are detected in your area.
+        </div>
+      </div>
+      <div style="font-size:13px;color:#666; padding: 8px 8px 0 8px;">Data from NASA FIRMS VIIRS satellite system, updated every 10 minutes.</div>
+    </div>
+  </div>
+  <!-- Most Recent Hotspot Info Modal -->
+  <div class="about-modal" id="recentHotspotModal" role="dialog" aria-modal="true" aria-label="Most Recent Hotspot Information">
+    <div class="about-modal-content" style="max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+      <button class="about-modal-close" id="recentHotspotCloseBtn" title="Close" aria-label="Close">×</button>
+      <h3>Most Recent Hotspot Information</h3>
+      <div style="flex:1; overflow-y: auto; padding: 0 2px 0 0; margin-bottom:12px; font-size:14px; color:#222; border-radius: 10px; padding-left: 8px; padding-right: 8px;">
+        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #ffd700;">
+          <strong>Definition:</strong> Gold/yellow circular markers represent the most recently detected fire hotspots.<br>
+          <strong>Time Range:</strong> The latest fire detections from the most recent satellite pass.
+        </div>
+        
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">Visual Characteristics</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Color:</strong> Gold gradient (#ffd700 to #ff9900)</li>
+          <li><strong>Size:</strong> 11px radius (larger than current hotspots)</li>
+          <li><strong>Border:</strong> Orange outline for emphasis</li>
+          <li><strong>Opacity:</strong> 98% fill opacity for maximum visibility</li>
+        </ul>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">Data Significance</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Latest Activity:</strong> Represents the most current fire activity</li>
+          <li><strong>Immediate Risk:</strong> Highest priority for emergency response</li>
+          <li><strong>Fire Progression:</strong> Shows where fires are actively spreading</li>
+          <li><strong>Real-time Awareness:</strong> Critical for immediate safety decisions</li>
+        </ul>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">How to Use</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Priority Monitoring:</strong> Focus on gold hotspots for immediate threats</li>
+          <li><strong>Time Comparison:</strong> Compare with red hotspots to see fire movement</li>
+          <li><strong>Emergency Planning:</strong> Use for immediate evacuation decisions</li>
+          <li><strong>Toggle:</strong> Use legend control to show/hide most recent hotspots</li>
+        </ul>
+
+        <div style="background: #fff3e0; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #ff9800;">
+          <strong>Emergency Priority:</strong> Gold hotspots represent the most recent fire activity and should be given highest priority for emergency response and evacuation planning.
+        </div>
+      </div>
+      <div style="font-size:13px;color:#666; padding: 8px 8px 0 8px;">Data from NASA FIRMS VIIRS satellite system, updated every 10 minutes.</div>
+    </div>
+  </div>
+  <!-- Spread Path Info Modal -->
+  <div class="about-modal" id="spreadPathModal" role="dialog" aria-modal="true" aria-label="Spread Path Information">
+    <div class="about-modal-content" style="max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+      <button class="about-modal-close" id="spreadPathCloseBtn" title="Close" aria-label="Close">×</button>
+      <h3>Spread Path Information</h3>
+      <div style="flex:1; overflow-y: auto; padding: 0 2px 0 0; margin-bottom:12px; font-size:14px; color:#222; border-radius: 10px; padding-left: 8px; padding-right: 8px;">
+        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #ff6600;">
+          <strong>Definition:</strong> Colored lines connecting fire hotspots show the path of fire spread over time.<br>
+          <strong>Time Range:</strong> Fire movement patterns from the last 24 hours.
+        </div>
+        
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">Visual Characteristics</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Color Gradient:</strong> Yellow to red based on time (recent = red, older = yellow)</li>
+          <li><strong>Line Style:</strong> Dashed lines with 6px width and 45% opacity</li>
+          <li><strong>Direction Arrows:</strong> Triangle arrows show fire movement direction</li>
+          <li><strong>Time Encoding:</strong> Color indicates when the fire moved along that path</li>
+        </ul>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">Color Time Scale</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Red (#ff0000):</strong> Fire movement within last hour</li>
+          <li><strong>Orange (#ff6600):</strong> Fire movement 1-6 hours ago</li>
+          <li><strong>Light Orange (#ffb300):</strong> Fire movement 6-12 hours ago</li>
+          <li><strong>Yellow (#ffe066):</strong> Fire movement 12-24 hours ago</li>
+          <li><strong>Dark Grey (#666666):</strong> Fire movement over 24 hours ago</li>
+        </ul>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">Data Significance</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Fire Behavior:</strong> Shows how fires spread across the landscape</li>
+          <li><strong>Predictive Analysis:</strong> Helps predict future fire spread patterns</li>
+          <li><strong>Wind Effects:</strong> Reveals wind direction and speed impacts</li>
+          <li><strong>Terrain Influence:</strong> Shows how landscape affects fire movement</li>
+        </ul>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">How to Use</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Direction Analysis:</strong> Follow arrows to see fire movement direction</li>
+          <li><strong>Speed Assessment:</strong> Distance between points shows spread speed</li>
+          <li><strong>Pattern Recognition:</strong> Identify recurring fire spread patterns</li>
+          <li><strong>Toggle:</strong> Use legend control to show/hide spread paths and arrows</li>
+        </ul>
+
+        <div style="background: #e3f2fd; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #2196f3;">
+          <strong>Analysis Tip:</strong> Use the playback feature to animate fire spread over time and better understand fire behavior patterns.
+        </div>
+      </div>
+      <div style="font-size:13px;color:#666; padding: 8px 8px 0 8px;">Data from NASA FIRMS VIIRS satellite system, updated every 10 minutes.</div>
+    </div>
+  </div>
+  <!-- Highest FRP Info Modal -->
+  <div class="about-modal" id="highestFrpModal" role="dialog" aria-modal="true" aria-label="Highest FRP Information">
+    <div class="about-modal-content" style="max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+      <button class="about-modal-close" id="highestFrpCloseBtn" title="Close" aria-label="Close">×</button>
+      <h3>Highest FRP Information</h3>
+      <div style="flex:1; overflow-y: auto; padding: 0 2px 0 0; margin-bottom:12px; font-size:14px; color:#222; border-radius: 10px; padding-left: 8px; padding-right: 8px;">
+        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #1976d2;">
+          <strong>Definition:</strong> Blue glowing rings with star badges mark the fire hotspot with the highest Fire Radiative Power (FRP).<br>
+          <strong>Significance:</strong> Represents the most intense fire currently detected in the region.
+        </div>
+        
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">Visual Characteristics</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Glow Effect:</strong> Blue glowing ring around the hotspot</li>
+          <li><strong>Star Badge:</strong> Blue star (★) overlay on the hotspot</li>
+          <li><strong>Ring Size:</strong> 18px radius glow for emphasis</li>
+          <li><strong>Color:</strong> Blue (#1976d2) to distinguish from fire colors</li>
+        </ul>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">What is FRP?</h4>
+        <p style="margin: 8px 0 12px 0;"><strong>Fire Radiative Power (FRP)</strong> measures the rate of heat energy emitted by a fire in megawatts (MW). Higher FRP values indicate:</p>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Intensity:</strong> More intense, hotter fires</li>
+          <li><strong>Size:</strong> Larger fire areas or multiple fire fronts</li>
+          <li><strong>Fuel:</strong> Abundant, dry fuel sources</li>
+          <li><strong>Danger:</strong> Higher risk and faster spread potential</li>
+        </ul>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">FRP Scale Examples</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Low FRP (1-10 MW):</strong> Small fires, controlled burns</li>
+          <li><strong>Medium FRP (10-100 MW):</strong> Moderate wildfires</li>
+          <li><strong>High FRP (100-1000 MW):</strong> Large, intense wildfires</li>
+          <li><strong>Very High FRP (1000+ MW):</strong> Extreme fire events</li>
+        </ul>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">Emergency Significance</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Priority Response:</strong> Highest FRP fires need immediate attention</li>
+          <li><strong>Resource Allocation:</strong> Guide firefighting resource deployment</li>
+          <li><strong>Evacuation Planning:</strong> High FRP indicates severe fire conditions</li>
+          <li><strong>Risk Assessment:</strong> Predict fire behavior and spread potential</li>
+        </ul>
+
+        <div style="background: #e8f5e8; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #4caf50;">
+          <strong>Important:</strong> The highest FRP fire represents the most dangerous fire in the region and should be the primary focus for emergency response efforts.
+        </div>
+      </div>
+      <div style="font-size:13px;color:#666; padding: 8px 8px 0 8px;">Data from NASA FIRMS VIIRS satellite system, updated every 10 minutes.</div>
+    </div>
+  </div>
+  <!-- Decreasing FRP Info Modal -->
+  <div class="about-modal" id="decreasingFrpModal" role="dialog" aria-modal="true" aria-label="Decreasing FRP Information">
+    <div class="about-modal-content" style="max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+      <button class="about-modal-close" id="decreasingFrpCloseBtn" title="Close" aria-label="Close">×</button>
+      <h3>Decreasing FRP Information</h3>
+      <div style="flex:1; overflow-y: auto; padding: 0 2px 0 0; margin-bottom:12px; font-size:14px; color:#222; border-radius: 10px; padding-left: 8px; padding-right: 8px;">
+        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #4caf50;">
+          <strong>Definition:</strong> Green glowing rings with down arrows mark fire hotspots where FRP is decreasing.<br>
+          <strong>Significance:</strong> Indicates fires that are dying out or being controlled.
+        </div>
+        
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">Visual Characteristics</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Glow Effect:</strong> Green glowing ring around the hotspot</li>
+          <li><strong>Arrow Badge:</strong> Green down arrow (↓) overlay</li>
+          <li><strong>Ring Size:</strong> 16px radius glow for emphasis</li>
+          <li><strong>Color:</strong> Green (#4caf50) to indicate positive trend</li>
+        </ul>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">What Decreasing FRP Means</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Fire Control:</strong> Fire is being successfully contained</li>
+          <li><strong>Natural Decline:</strong> Fire is running out of fuel</li>
+          <li><strong>Weather Change:</strong> Rain, humidity, or wind changes</li>
+          <li><strong>Firefighting Success:</strong> Effective suppression efforts</li>
+        </ul>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">Detection Criteria</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>FRP Drop:</strong> 20% or greater decrease in FRP</li>
+          <li><strong>Time Analysis:</strong> Based on last 3 observations</li>
+          <li><strong>Location Tracking:</strong> Same fire location over time</li>
+          <li><strong>Trend Analysis:</strong> Consistent decreasing pattern</li>
+        </ul>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">Operational Benefits</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Resource Reallocation:</strong> Shift resources to active fires</li>
+          <li><strong>Risk Reduction:</strong> Lower immediate threat assessment</li>
+          <li><strong>Success Tracking:</strong> Monitor firefighting effectiveness</li>
+          <li><strong>Recovery Planning:</strong> Begin post-fire assessment</li>
+        </ul>
+
+        <h4 style="color: #1976d2; margin: 20px 0 12px 0;">Important Notes</h4>
+        <ul style="margin: 8px 0 12px 18px;">
+          <li><strong>Caution:</strong> Decreasing FRP doesn't guarantee fire is out</li>
+          <li><strong>Monitoring:</strong> Continue monitoring for flare-ups</li>
+          <li><strong>Safety:</strong> Follow local authority instructions</li>
+          <li><strong>Verification:</strong> Confirm with ground reports when possible</li>
+        </ul>
+
+        <div style="background: #e8f5e8; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #4caf50;">
+          <strong>Positive Sign:</strong> Decreasing FRP indicates improving fire conditions, but maintain vigilance as fires can reignite under changing conditions.
+        </div>
+      </div>
+      <div style="font-size:13px;color:#666; padding: 8px 8px 0 8px;">Data from NASA FIRMS VIIRS satellite system, updated every 10 minutes.</div>
+    </div>
+  </div>
+  <button class="log-panel-toggle material-card" id="logToggle" title="Show system logs" aria-label="Show system logs" tabindex="0" style="position:fixed;bottom:24px;right:24px;z-index:2001;width:56px;height:56px;font-size:28px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(66,133,244,0.18);background:linear-gradient(135deg,#222,#1976d2);color:#fff;cursor:pointer;">
+    <span style="font-size:28px;">📝</span>
+  </button>
+  <div class="log-modal" id="logModal" role="dialog" aria-modal="true" aria-label="System Logs" style="display:none;position:fixed;bottom:0;right:0;width:480px;max-width:98vw;height:60vh;max-height:90vh;background:#fff;border-radius:18px 18px 0 0;box-shadow:0 8px 32px rgba(0,0,0,0.18);z-index:2002;overflow:hidden;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 8px 20px;background:#f7fafd;border-bottom:1px solid #e0e0e0;">
+      <span style="font-size:18px;font-weight:600;color:#1976d2;">System Logs</span>
+      <button id="logCloseBtn" title="Close" aria-label="Close" style="background:none;border:none;font-size:28px;color:#888;cursor:pointer;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all 0.2s;">
+        ×
+      </button>
+    </div>
+    <pre id="logContent" style="flex:1;overflow-y:auto;padding:18px 20px 18px 20px;margin:0;font-size:13px;line-height:1.5;background:#fff;color:#222;font-family:Menlo,Monaco,Consolas,monospace;border:none;">Loading logs…</pre>
+  </div>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
+  <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
+  <script>
+    var map = L.map('map').setView([35.52, 35.78], 11); // Initial view, closer zoom
+    // Base layers
+    var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 });
+    osm.addTo(map);
+
+    // Contextual overlays
+    var roads = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', { maxZoom: 18, opacity: 0.7, attribution: 'OSM Roads' });
+    // Example: Populated places (replace with your own GeoJSON for real data)
+    var populatedPlaces = L.geoJSON(null, {
+      pointToLayer: function (feature, latlng) {
+        return L.circleMarker(latlng, { radius: 6, fillColor: '#0074D9', color: '#005fa3', weight: 2, opacity: 1, fillOpacity: 0.7 });
+      },
+      onEachFeature: function (feature, layer) {
+        layer.bindPopup('<b>Populated Place</b><br>' + (feature.properties.name || 'Name unknown'));
+      }
+    });
+    // Load a sample GeoJSON (replace URL with your own data source)
+    fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
+      .then(res => res.json())
+      .then(data => {
+        // Add Gaza-adjacent context points (generic placeholders)
+        populatedPlaces.addData({
+          "type": "FeatureCollection",
+          "features": [
+            {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.470, 31.530]}, "properties": {"name": "Gaza City (context)"}},
+            {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.445, 31.349]}, "properties": {"name": "Khan Yunis (context)"}}
+          ]
+        });
+      });
+
+    // Layer control
+    var overlayMaps = {
+      "Roads": roads,
+      "Populated Places": populatedPlaces
+    };
+    L.control.layers(null, overlayMaps, { collapsed: false, position: 'topright' }).addTo(map);
+
+    // Accuracy info is now in the sidebar
+
+    var geojsonLayer;
+    var bufferLayer;
+    var classifiedLayer = L.layerGroup();
+    overlayMaps["Classified Incidents"] = classifiedLayer;
+    classifiedLayer.addTo(map);
+
+    function getColorByAge(hoursAgo) {
+      // Color gradient: 0h (now) = #ff0000, 24h = #ffe066, older = #666666
+      if (hoursAgo <= 1) return '#ff0000';
+      if (hoursAgo <= 6) return '#ff6600';
+      if (hoursAgo <= 12) return '#ffb300';
+      if (hoursAgo <= 24) return '#ffe066';
+      return '#666666';
+    }
+
+    let playbackInterval = null;
+    let playbackIndex = 1;
+    let playbackActive = false;
+    let spreadSegments = [];
+
+    function drawSpreadPath(features, upToIndex = null) {
+      // Remove previous lines and decorators
+      if (window.spreadPathLayer) {
+        map.removeLayer(window.spreadPathLayer);
+      }
+      if (window.spreadPathArrows) {
+        map.removeLayer(window.spreadPathArrows);
+      }
+      window.spreadPathLayer = L.layerGroup();
+      window.spreadPathArrows = L.layerGroup();
+      // Sort by time (oldest to newest)
+      const sorted = features.slice().sort((a, b) => {
+        const da = a.properties.acq_date + String(a.properties.acq_time).padStart(4, '0');
+        const db = b.properties.acq_date + String(b.properties.acq_time).padStart(4, '0');
+        return da.localeCompare(db);
+      });
+      spreadSegments = [];
+      for (let i = 1; i < sorted.length; i++) {
+        const prev = sorted[i-1];
+        const curr = sorted[i];
+        const currDate = new Date(curr.properties.acq_date + 'T' + String(curr.properties.acq_time).padStart(4, '0').slice(0,2) + ':' + String(curr.properties.acq_time).padStart(4, '0').slice(2,4) + ':00Z');
+        const hoursAgo = (Date.now() - currDate.getTime()) / (1000*60*60);
+        spreadSegments.push({
+          coords: [
+            [prev.geometry.coordinates[1], prev.geometry.coordinates[0]],
+            [curr.geometry.coordinates[1], curr.geometry.coordinates[0]]
+          ],
+          color: getColorByAge(hoursAgo)
+        });
+      }
+      // Draw up to upToIndex (or all if null)
+      let end = upToIndex === null ? spreadSegments.length : upToIndex;
+      for (let i = 0; i < end; i++) {
+        // Draw the spread path segment
+        L.polyline(spreadSegments[i].coords, {
+          color: spreadSegments[i].color,
+          weight: 6,
+          opacity: 0.45,
+          dashArray: '8,12',
+          interactive: false
+        }).addTo(window.spreadPathLayer);
+        // Draw arrowhead for direction using PolylineDecorator
+        var arrowDecorator = L.polylineDecorator(
+          L.polyline(spreadSegments[i].coords),
+          {
+            patterns: [
+              {
+                offset: '80%',
+                repeat: 0,
+                symbol: L.Symbol.arrowHead({
+                  pixelSize: 18,
+                  polygon: true,
+                  pathOptions: {
+                    stroke: true,
+                    color: '#222', // High-contrast outline
+                    weight: 4,
+                    opacity: 0.85
+                  }
+                })
+              },
+              {
+                offset: '80%',
+                repeat: 0,
+                symbol: L.Symbol.arrowHead({
+                  pixelSize: 12,
+                  polygon: true,
+                  pathOptions: {
+                    stroke: true,
+                    color: spreadSegments[i].color, // Fill matches segment
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 1,
+                    fill: true
+                  }
+                })
+              }
+            ]
+          }
+        );
+        arrowDecorator.addTo(window.spreadPathArrows);
+      }
+      window.spreadPathLayer.addTo(map);
+      window.spreadPathArrows.addTo(map);
+    }
+
+    // Fetch and render classified incidents
+    async function loadClassifiedIncidents(opts) {
+      try {
+        // Default: last 48h window, Gaza bbox
+        const now = new Date();
+        const toIso = (opts && opts.toIso) || now.toISOString();
+        const fromIso = (opts && opts.fromIso) || new Date(now.getTime() - 48 * 3600 * 1000).toISOString();
+        const bbox = '34.2,31.2,34.65,31.6';
+        const url = `/predict?model=viirs&from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}&bbox=${bbox}&window_minutes=180`;
+        const res = await fetch(url);
+        const gj = await res.json();
+        classifiedLayer.clearLayers();
+        const showExplosion = document.getElementById('filterExplosion')?.checked !== false;
+        const showFire = document.getElementById('filterFire')?.checked !== false;
+        const filtered = {
+          type: 'FeatureCollection',
+          features: (gj.features || []).filter(f => {
+            const t = (f.properties && f.properties.event_type) || 'unknown';
+            if (t === 'explosion') return showExplosion;
+            if (t === 'fire') return showFire;
+            return true;
+          })
+        };
+        L.geoJSON(filtered, {
+          pointToLayer: function(feature, latlng) {
+            const t = feature.properties.event_type;
+            const conf = feature.properties.confidence || 0;
+            const color = t === 'explosion' ? '#e53935' : (t === 'fire' ? '#fb8c00' : '#757575');
+            const radius = Math.max(6, Math.min(14, 6 + (conf * 8)));
+            return L.circleMarker(latlng, {
+              radius: radius,
+              color: color,
+              fillColor: color,
+              fillOpacity: 0.6,
+              weight: 2
+            });
+          },
+          onEachFeature: function (feature, layer) {
+            const p = feature.properties || {};
+            const html = `
+              <div style="font-size:13px;line-height:1.4;">
+                <div><b>Type:</b> ${p.event_type || 'unknown'}</div>
+                <div><b>Confidence:</b> ${p.confidence != null ? p.confidence : 'n/a'}</div>
+                <div><b>Window:</b> ${p.acq_start || ''} → ${p.acq_end || ''}</div>
+                <div><b>Max FRP:</b> ${p.max_frp != null ? p.max_frp : 'n/a'}</div>
+                <div><b>Model:</b> ${p.model || 'viirs'}</div>
+                <div><b>Count:</b> ${p.count || 0}</div>
+              </div>`;
+            layer.bindPopup(html);
+          }
+        }).addTo(classifiedLayer);
+      } catch (e) {
+        console.error('Failed to load classified incidents', e);
+      }
+    }
+
+    // Wire UI controls
+    document.getElementById('applyFiltersBtn')?.addEventListener('click', () => {
+      const fromEl = document.getElementById('fromInput');
+      const toEl = document.getElementById('toInput');
+      let fromIso = fromEl && fromEl.value ? new Date(fromEl.value).toISOString() : undefined;
+      let toIso = toEl && toEl.value ? new Date(toEl.value).toISOString() : undefined;
+      loadClassifiedIncidents({ fromIso, toIso });
+    });
+
+    loadClassifiedIncidents();
+
+    function startPlayback(features) {
+      playbackActive = true;
+      playbackIndex = 1;
+      document.getElementById('playPauseBtn').textContent = '⏸';
+      document.getElementById('playbackStatus').textContent = 'Playing...';
+      drawSpreadPath(features, 1);
+      playbackInterval = setInterval(() => {
+        playbackIndex++;
+        if (playbackIndex > spreadSegments.length) {
+          clearInterval(playbackInterval);
+          playbackActive = false;
+          document.getElementById('playPauseBtn').textContent = '▶︎';
+          document.getElementById('playbackStatus').textContent = 'Replay Last 10 Days';
+          return;
+        }
+        drawSpreadPath(features, playbackIndex);
+      }, 350);
+    }
+
+    function stopPlayback(features) {
+      playbackActive = false;
+      clearInterval(playbackInterval);
+      drawSpreadPath(features);
+      document.getElementById('playPauseBtn').textContent = '▶︎';
+      document.getElementById('playbackStatus').textContent = 'Replay Last 10 Days';
+    }
+
+    let timeSlider = document.getElementById('timeSlider');
+    let timeSliderLabel = document.getElementById('timeSliderLabel');
+    let timeSliderContainer = document.getElementById('timeSliderContainer');
+    let timeSliderTimestamps = [];
+
+    function updateTimeSlider(features) {
+      // Get sorted unique timestamps by hour
+      const sorted = features.slice().sort((a, b) => {
+        const da = a.properties.acq_date + String(a.properties.acq_time).padStart(4, '0');
+        const db = b.properties.acq_date + String(b.properties.acq_time).padStart(4, '0');
+        return da.localeCompare(db);
+      });
+      // Map to hourly buckets in Syria time, but only include those within the last 30 days
+      let hourSet = new Set();
+      let hourLabels = [];
+      const now = new Date();
+      sorted.forEach(f => {
+        const d = f.properties.acq_date;
+        const t = String(f.properties.acq_time).padStart(4, '0');
+        const iso = d + 'T' + t.slice(0,2) + ':' + t.slice(2,4) + ':00Z';
+        const dt = new Date(iso);
+        // Convert to Syria time
+        const syriaTime = new Date(dt.toLocaleString('en-US', { timeZone: 'Asia/Damascus' }));
+        const diffDays = (now - syriaTime) / (1000 * 60 * 60 * 24);
+        if (diffDays <= 30) {
+          let syriaDateTime = '--';
+          try {
+            const dateStr = dt.toLocaleDateString('en-CA', { timeZone: 'Asia/Damascus' });
+            const hourStr = dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Damascus' });
+            syriaDateTime = dateStr + ' ' + hourStr;
+          } catch {}
+          if (!hourSet.has(syriaDateTime)) {
+            hourSet.add(syriaDateTime);
+            hourLabels.push(syriaDateTime);
+          }
+        }
+      });
+      timeSliderTimestamps = hourLabels;
+      timeSlider.min = 0;
+      timeSlider.max = hourLabels.length - 1;
+      timeSlider.value = hourLabels.length - 1;
+
+      // Render tick marks for every hour, but only label a few (start, middle, end, and maybe 1-2 in between)
+      let tickLabels = Array(hourLabels.length).fill('');
+      if (hourLabels.length > 0) {
+        tickLabels[0] = hourLabels[0].split(' ')[1];
+        tickLabels[hourLabels.length - 1] = hourLabels[hourLabels.length - 1].split(' ')[1];
+        if (hourLabels.length > 2) {
+          const mid = Math.floor(hourLabels.length / 2);
+          tickLabels[mid] = hourLabels[mid].split(' ')[1];
+        }
+        if (hourLabels.length > 4) {
+          const q1 = Math.floor(hourLabels.length / 4);
+          const q3 = Math.floor(3 * hourLabels.length / 4);
+          tickLabels[q1] = hourLabels[q1].split(' ')[1];
+          tickLabels[q3] = hourLabels[q3].split(' ')[1];
+        }
+      }
+      const ticks = tickLabels.map((label, i) => `<span style='flex:1;text-align:center;font-size:${label ? '12px' : '0'};color:#444;'>${label}</span>`).join('');
+      document.getElementById('sliderTicks').innerHTML = ticks;
+      updateTimeSliderLabel();
+    }
+
+    function updateTimeSliderLabel() {
+      if (timeSliderTimestamps.length === 0) {
+        timeSliderLabel.textContent = 'Time: --';
+      } else {
+        // Format: 'Time: 2025-07-11 11:00' (Syria time)
+        const val = timeSliderTimestamps[timeSlider.value];
+        timeSliderLabel.textContent = 'Time: ' + val;
+      }
+    }
+
+    timeSlider.oninput = function() {
+      if (window.lastHotspotFeatures) {
+        const idx = parseInt(timeSlider.value);
+        // If at the latest time, show all lines
+        if (idx === timeSliderTimestamps.length - 1) {
+          drawSpreadPath(window.lastHotspotFeatures);
+        } else {
+          // Only include features up to this time
+          const cutoff = timeSliderTimestamps[idx];
+          // Convert cutoff to comparable ISO string in Syria time
+          const cutoffDate = cutoff.split(' ')[0];
+          const cutoffTime = cutoff.split(' ')[1];
+          // Find all features up to and including this hour in Syria time
+          const filtered = window.lastHotspotFeatures.filter(f => {
+            const d = f.properties.acq_date;
+            const t = String(f.properties.acq_time).padStart(4, '0');
+            const iso = d + 'T' + t.slice(0,2) + ':' + t.slice(2,4) + ':00Z';
+            const dt = new Date(iso);
+            let syriaDateTime = '--';
+            try {
+              const dateStr = dt.toLocaleDateString('en-CA', { timeZone: 'Asia/Damascus' });
+              const hourStr = dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Damascus' });
+              syriaDateTime = dateStr + ' ' + hourStr;
+            } catch {}
+            return syriaDateTime <= cutoff;
+          });
+          drawSpreadPath(filtered);
+        }
+        updateTimeSliderLabel();
+      }
+    };
+
+    // Model toggle logic
+    let currentModel = 'viirs';
+    const viirsBtn = document.getElementById('viirsBtn');
+    const modisBtn = document.getElementById('modisBtn');
+    const currentModelLabel = document.getElementById('currentModelLabel');
+
+    function setModel(model) {
+      currentModel = model;
+      if (model === 'viirs') {
+        viirsBtn.classList.add('active');
+        modisBtn.classList.remove('active');
+        currentModelLabel.textContent = 'Currently: VIIRS';
+      } else {
+        viirsBtn.classList.remove('active');
+        modisBtn.classList.add('active');
+        currentModelLabel.textContent = 'Currently: MODIS';
+      }
+      updateProvenanceCard();
+      loadHotspots();
+    }
+    viirsBtn.onclick = () => setModel('viirs');
+    modisBtn.onclick = () => setModel('modis');
+
+    function updateProvenanceCard() {
+      const prov = document.querySelector('.provenance-card');
+      if (currentModel === 'viirs') {
+        prov.innerHTML = `NASA FIRMS API<br>Bounding box: 35.0,35.0,36.0,36.0 <br>Product: <b>VIIRS_SNPP_NRT</b> <br>Days: 10<br>Each hotspot shows confidence and timestamp in its popup.`;
+      } else {
+        prov.innerHTML = `NASA FIRMS API<br>Bounding box: 35.0,35.0,36.0,36.0 <br>Product: <b>MODIS_NRT</b> <br>Days: 10<br>Each hotspot shows confidence and timestamp in its popup.`;
+      }
+    }
+
+    function loadHotspots() {
+      fetch(`http://localhost:5000/hotspots?model=${currentModel}`)
+        .then(res => res.json())
+        .then(data => {
+          const features = data.features;
+          if (features.length === 0) {
+            showNoFiresPopup();
+            // ...
+            return;
+          }
+          // Find the most recent detection date
+          let mostRecent = null;
+          let mostRecentTime = null;
+          features.forEach(f => {
+            const d = f.properties.acq_date;
+            const t = f.properties.acq_time;
+            if (d && t) {
+              const dt = d + 'T' + String(t).padStart(4, '0').slice(0,2) + ':' + String(t).padStart(4, '0').slice(2,4);
+              if (!mostRecentTime || dt > mostRecentTime) {
+                mostRecentTime = dt;
+                mostRecent = f;
+              }
+            }
+          });
+          // Add sidebar/legend message
+          var legendTimesBlock = document.getElementById('legend-detection-times');
+          if (legendTimesBlock) {
+            var msg = '';
+            if (mostRecentTime) {
+              var dt = new Date(mostRecent.properties.acq_date + 'T' + String(mostRecent.properties.acq_time).padStart(4, '0').slice(0,2) + ':' + String(mostRecent.properties.acq_time).padStart(4, '0').slice(2,4) + ':00Z');
+              var syriaDate = dt.toLocaleDateString('en-CA', { timeZone: 'Asia/Damascus' });
+              var syriaTime = dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Damascus' });
+              var now = new Date();
+              var nowSyria = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Damascus' }));
+              var diffDays = Math.floor((nowSyria - dt) / (1000 * 60 * 60 * 24));
+              if (diffDays >= 1) {
+                msg = `<div style='color:#d32f2f;font-weight:600;margin-bottom:6px;'>No new fires detected since ${syriaDate}.</div><div style='color:#1976d2;'>Last fire detection: ${syriaDate} ${syriaTime} (Syria Time)</div>`;
+              } else {
+                msg = `<div style='color:#388e3c;font-weight:600;margin-bottom:6px;'>Active fires detected.</div><div style='color:#1976d2;'>Last fire detection: ${syriaDate} ${syriaTime} (Syria Time)</div>`;
+              }
+            }
+            legendTimesBlock.insertAdjacentHTML('afterbegin', msg);
+          }
+          // ... rest of your code ...
+        });
+    }
+
+    // Initial load
+    loadHotspots();
+
+    // Refresh every 60 seconds (60000 ms)
+    setInterval(loadHotspots, 60000);
+
+    // Info panel toggle logic
+    const infoToggle = document.getElementById('infoToggle');
+    const infoPanel = document.getElementById('infoPanel');
+    infoToggle.addEventListener('click', function() {
+      if (infoPanel.style.display === 'none') {
+        infoPanel.style.display = 'block';
+        infoToggle.textContent = '×';
+        infoToggle.title = 'Hide wildfire info';
+      } else {
+        infoPanel.style.display = 'none';
+        infoToggle.textContent = 'i';
+        infoToggle.title = 'Show wildfire info';
+      }
+    });
+
+    // Keyboard accessibility for info panel and playback controls
+    infoToggle.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        infoToggle.click();
+        e.preventDefault();
+      }
+    });
+    document.getElementById('playPauseBtn').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        document.getElementById('playPauseBtn').click();
+        e.preventDefault();
+      }
+    });
+    timeSlider.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+        timeSlider.value = Math.max(parseInt(timeSlider.value) - 1, parseInt(timeSlider.min));
+        timeSlider.oninput();
+        e.preventDefault();
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+        timeSlider.value = Math.min(parseInt(timeSlider.value) + 1, parseInt(timeSlider.max));
+        timeSlider.oninput();
+        e.preventDefault();
+      }
+    });
+
+    // --- Add/update this function to update the data-age-card ---
+    function updateDataAgeCard() {
+      var card = document.getElementById('data-age-card');
+      if (!window.lastUpdateTimestamp) {
+        card.textContent = 'Last Updated: --:-- Syria Time (-- ago)';
+        return;
+      }
+      var dt = new Date(window.lastUpdateTimestamp);
+      try {
+        var syriaTime = dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Damascus' });
+        var nowSyriaTime = new Date();
+        var nowSyria = new Date(nowSyriaTime.toLocaleString('en-US', { timeZone: 'Asia/Damascus' }));
+        var diffMs = nowSyria - dt;
+        var diffMins = Math.floor(diffMs / 60000);
+        var diffHours = Math.floor(diffMins / 60);
+        var mins = diffMins % 60;
+        var ageStr = '';
+        if (diffHours > 0) {
+          ageStr = diffHours + 'h ' + mins + 'm ago';
+        } else {
+          ageStr = mins + 'm ago';
+        }
+        card.textContent = `Last Updated: ${syriaTime} Syria Time (${ageStr})`;
+      } catch {
+        card.textContent = 'Last Updated: --:-- Syria Time (-- ago)';
+      }
+    }
+
+    // --- Set up a timer to update the card every minute ---
+    setInterval(updateDataAgeCard, 60000);
+
+    function updateFetchStatusCard() {
+      fetch('http://localhost:5000/fetch_status')
+        .then(res => res.json())
+        .then(data => {
+          const card = document.getElementById('fetchStatusCard');
+          if (data.status === 'success') {
+            card.innerHTML = `<span style='color: #388e3c; font-weight: 600;'>✔ Last fetch successful</span><br><span style='color:#444;'>${data.timestamp ? 'at ' + new Date(data.timestamp).toLocaleString() : ''}</span>`;
+            card.style.borderLeft = '4px solid #388e3c';
+            card.style.background = 'rgba(232, 245, 233, 0.95)';
+          } else {
+            card.innerHTML = `<span style='color: #d32f2f; font-weight: 600;'>✖ Fetch error</span><br><span style='color:#d32f2f;'>${data.message || 'Unknown error.'}</span><br><span style='color:#444;'>${data.timestamp ? 'at ' + new Date(data.timestamp).toLocaleString() : ''}</span>`;
+            card.style.borderLeft = '4px solid #d32f2f';
+            card.style.background = 'rgba(255, 235, 238, 0.95)';
+          }
+        })
+        .catch(() => {
+          const card = document.getElementById('fetchStatusCard');
+          card.innerHTML = `<span style='color: #d32f2f; font-weight: 600;'>✖ Could not load fetch status</span>`;
+          card.style.borderLeft = '4px solid #d32f2f';
+          card.style.background = 'rgba(255, 235, 238, 0.95)';
+        });
+    }
+    updateFetchStatusCard();
+    setInterval(updateFetchStatusCard, 60000);
+
+    // Modal logic for Help/About and NASA Data Info
+    (function() {
+      // Help/About modal logic
+      var helpBtn = document.getElementById('helpBtn');
+      var aboutModal = document.getElementById('aboutModal');
+      var aboutCloseBtn = document.getElementById('aboutCloseBtn');
+      if (helpBtn && aboutModal && aboutCloseBtn) {
+        helpBtn.onclick = function() { aboutModal.style.display = 'flex'; };
+        aboutCloseBtn.onclick = function() { aboutModal.style.display = 'none'; };
+        aboutModal.onclick = function(e) { if (e.target === aboutModal) aboutModal.style.display = 'none'; };
+        helpBtn.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { helpBtn.click(); e.preventDefault(); } });
+      }
+      // NASA Data Info modal logic
+      var nasaInfoBtn = document.getElementById('nasaInfoBtn');
+      var nasaInfoModal = document.getElementById('nasaInfoModal');
+      var nasaInfoCloseBtn = document.getElementById('nasaInfoCloseBtn');
+      if (nasaInfoBtn && nasaInfoModal && nasaInfoCloseBtn) {
+        nasaInfoBtn.onclick = function() { nasaInfoModal.style.display = 'flex'; };
+        nasaInfoCloseBtn.onclick = function() { nasaInfoModal.style.display = 'none'; };
+        nasaInfoModal.onclick = function(e) { if (e.target === nasaInfoModal) nasaInfoModal.style.display = 'none'; };
+        nasaInfoBtn.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { nasaInfoBtn.click(); e.preventDefault(); } });
+      }
+      // Risk Buffer Analysis modal logic
+      var riskBufferInfoBtn = document.getElementById('riskBufferInfoBtn');
+      var riskBufferModal = document.getElementById('riskBufferModal');
+      var riskBufferCloseBtn = document.getElementById('riskBufferCloseBtn');
+      if (riskBufferInfoBtn && riskBufferModal && riskBufferCloseBtn) {
+        riskBufferInfoBtn.onclick = function() { riskBufferModal.style.display = 'flex'; };
+        riskBufferCloseBtn.onclick = function() { riskBufferModal.style.display = 'none'; };
+        riskBufferModal.onclick = function(e) { if (e.target === riskBufferModal) riskBufferModal.style.display = 'none'; };
+        riskBufferInfoBtn.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { riskBufferInfoBtn.click(); e.preventDefault(); } });
+      }
+      // Current Hotspot Info modal logic
+      var currentHotspotInfoBtn = document.getElementById('currentHotspotInfoBtn');
+      var currentHotspotModal = document.getElementById('currentHotspotModal');
+      var currentHotspotCloseBtn = document.getElementById('currentHotspotCloseBtn');
+      if (currentHotspotInfoBtn && currentHotspotModal && currentHotspotCloseBtn) {
+        currentHotspotInfoBtn.onclick = function() { currentHotspotModal.style.display = 'flex'; };
+        currentHotspotCloseBtn.onclick = function() { currentHotspotModal.style.display = 'none'; };
+        currentHotspotModal.onclick = function(e) { if (e.target === currentHotspotModal) currentHotspotModal.style.display = 'none'; };
+        currentHotspotInfoBtn.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { currentHotspotInfoBtn.click(); e.preventDefault(); } });
+      }
+      // Most Recent Hotspot Info modal logic
+      var recentHotspotInfoBtn = document.getElementById('recentHotspotInfoBtn');
+      var recentHotspotModal = document.getElementById('recentHotspotModal');
+      var recentHotspotCloseBtn = document.getElementById('recentHotspotCloseBtn');
+      if (recentHotspotInfoBtn && recentHotspotModal && recentHotspotCloseBtn) {
+        recentHotspotInfoBtn.onclick = function() { recentHotspotModal.style.display = 'flex'; };
+        recentHotspotCloseBtn.onclick = function() { recentHotspotModal.style.display = 'none'; };
+        recentHotspotModal.onclick = function(e) { if (e.target === recentHotspotModal) recentHotspotModal.style.display = 'none'; };
+        recentHotspotInfoBtn.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { recentHotspotInfoBtn.click(); e.preventDefault(); } });
+      }
+      // Spread Path Info modal logic
+      var spreadPathInfoBtn = document.getElementById('spreadPathInfoBtn');
+      var spreadPathModal = document.getElementById('spreadPathModal');
+      var spreadPathCloseBtn = document.getElementById('spreadPathCloseBtn');
+      if (spreadPathInfoBtn && spreadPathModal && spreadPathCloseBtn) {
+        spreadPathInfoBtn.onclick = function() { spreadPathModal.style.display = 'flex'; };
+        spreadPathCloseBtn.onclick = function() { spreadPathModal.style.display = 'none'; };
+        spreadPathModal.onclick = function(e) { if (e.target === spreadPathModal) spreadPathModal.style.display = 'none'; };
+        spreadPathInfoBtn.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { spreadPathInfoBtn.click(); e.preventDefault(); } });
+      }
+      // Highest FRP Info modal logic
+      var highestFrpInfoBtn = document.getElementById('highestFrpInfoBtn');
+      var highestFrpModal = document.getElementById('highestFrpModal');
+      var highestFrpCloseBtn = document.getElementById('highestFrpCloseBtn');
+      if (highestFrpInfoBtn && highestFrpModal && highestFrpCloseBtn) {
+        highestFrpInfoBtn.onclick = function() { highestFrpModal.style.display = 'flex'; };
+        highestFrpCloseBtn.onclick = function() { highestFrpModal.style.display = 'none'; };
+        highestFrpModal.onclick = function(e) { if (e.target === highestFrpModal) highestFrpModal.style.display = 'none'; };
+        highestFrpInfoBtn.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { highestFrpInfoBtn.click(); e.preventDefault(); } });
+      }
+      // Decreasing FRP Info modal logic
+      var decreasingFrpInfoBtn = document.getElementById('decreasingFrpInfoBtn');
+      var decreasingFrpModal = document.getElementById('decreasingFrpModal');
+      var decreasingFrpCloseBtn = document.getElementById('decreasingFrpCloseBtn');
+      if (decreasingFrpInfoBtn && decreasingFrpModal && decreasingFrpCloseBtn) {
+        decreasingFrpInfoBtn.onclick = function() { decreasingFrpModal.style.display = 'flex'; };
+        decreasingFrpCloseBtn.onclick = function() { decreasingFrpModal.style.display = 'none'; };
+        decreasingFrpModal.onclick = function(e) { if (e.target === decreasingFrpModal) decreasingFrpModal.style.display = 'none'; };
+        decreasingFrpInfoBtn.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { decreasingFrpInfoBtn.click(); e.preventDefault(); } });
+      }
+    })();
+
+    function updateSidebarStatusBanner() {
+      fetch('http://localhost:5000/fetch_status')
+        .then(res => res.json())
+        .then(data => {
+          const el = document.getElementById('sidebarStatusBanner');
+          if (data.status === 'success') {
+            el.className = 'sidebar-status-banner';
+            el.innerHTML = `<span class="status-icon">✔️</span> Data Pipeline Healthy <span style='font-weight:400;font-size:13px;margin-left:auto;'>Last fetch: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : ''}</span>`;
+          } else {
+            el.className = 'sidebar-status-banner error';
+            el.innerHTML = `<span class="status-icon">✖️</span> Data Pipeline Error <span style='font-weight:400;font-size:13px;margin-left:auto;'>${data.message || 'Unknown error.'}</span>`;
+          }
+        })
+        .catch(() => {
+          const el = document.getElementById('sidebarStatusBanner');
+          el.className = 'sidebar-status-banner error';
+          el.innerHTML = `<span class="status-icon">✖️</span> Could not load status`;
+        });
+    }
+    updateSidebarStatusBanner();
+    setInterval(updateSidebarStatusBanner, 60000);
+
+    // --- Log Panel Popup ---
+    const logToggle = document.getElementById('logToggle');
+    const logModal = document.getElementById('logModal');
+    const logCloseBtn = document.getElementById('logCloseBtn');
+    const logContent = document.getElementById('logContent');
+    let logInterval = null;
+    function fetchLogs() {
+      fetch('http://localhost:5000/logs')
+        .then(res => res.text())
+        .then(text => { logContent.textContent = text; logContent.scrollTop = logContent.scrollHeight; })
+        .catch(() => { logContent.textContent = 'Could not load logs.'; });
+    }
+    logToggle.onclick = function() {
+      logModal.style.display = 'flex';
+      fetchLogs();
+      logInterval = setInterval(fetchLogs, 5000);
+    };
+    logCloseBtn.onclick = function() {
+      logModal.style.display = 'none';
+      clearInterval(logInterval);
+    };
+    logToggle.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') { logToggle.click(); e.preventDefault(); }
+    });
+    logCloseBtn.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') { logCloseBtn.click(); e.preventDefault(); }
+    });
+    // Accessibility: close modal with Escape
+    document.addEventListener('keydown', function(e) {
+      if (logModal.style.display === 'flex' && e.key === 'Escape') {
+        logModal.style.display = 'none';
+        clearInterval(logInterval);
+      }
+    });
+    // --- Playback FAB icon toggle ---
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const playPauseIcon = document.getElementById('playPauseIcon');
+    let isPlaying = false;
+    playPauseBtn.onclick = function() {
+      isPlaying = !isPlaying;
+      playPauseIcon.textContent = isPlaying ? 'pause' : 'play_arrow';
+      // ... your playback logic ...
+    };
+
+    var geojsonLayer;
+    var bufferLayer;
+
+    function analyzeFRPTrends(features) {
+      // Group features by location (within 500m radius) to track FRP changes over time
+      const locationGroups = {};
+      const radius = 0.005; // ~500m in degrees
+      
+      features.forEach(feature => {
+        const lat = feature.geometry.coordinates[1];
+        const lng = feature.geometry.coordinates[0];
+        const frp = parseFloat(feature.properties.frp);
+        const date = feature.properties.acq_date;
+        const time = feature.properties.acq_time;
+        
+        if (isNaN(frp)) return;
+        
+        // Create a timestamp for sorting
+        const timestamp = date + 'T' + String(time).padStart(4, '0').slice(0,2) + ':' + String(time).padStart(4, '0').slice(2,4) + ':00Z';
+        
+        // Find or create location group
+        let foundGroup = false;
+        for (const groupKey in locationGroups) {
+          const [groupLat, groupLng] = groupKey.split(',').map(Number);
+          const distance = Math.sqrt(Math.pow(lat - groupLat, 2) + Math.pow(lng - groupLng, 2));
+          
+          if (distance <= radius) {
+            locationGroups[groupKey].push({
+              frp,
+              timestamp,
+              feature,
+              date,
+              time
+            });
+            foundGroup = true;
+            break;
+          }
+        }
+        
+        if (!foundGroup) {
+          const key = `${lat},${lng}`;
+          locationGroups[key] = [{
+            frp,
+            timestamp,
+            feature,
+            date,
+            time
+          }];
+        }
+      });
+      
+      // Analyze trends for each location group
+      const decreasingFRPLocations = new Set();
+      
+      Object.values(locationGroups).forEach(group => {
+        if (group.length < 2) return; // Need at least 2 observations for trend analysis
+        
+        // Sort by timestamp (oldest first)
+        group.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+        
+        // Calculate FRP trend over the last 3 observations (if available)
+        const recentObservations = group.slice(-3);
+        if (recentObservations.length >= 2) {
+          const firstFRP = recentObservations[0].frp;
+          const lastFRP = recentObservations[recentObservations.length - 1].frp;
+          const frpChange = lastFRP - firstFRP;
+          const percentChange = (frpChange / firstFRP) * 100;
+          
+          // Consider it decreasing if FRP dropped by more than 20% over the period
+          if (frpChange < 0 && percentChange < -20) {
+            // Mark all features in this location as decreasing FRP
+            group.forEach(obs => {
+              const key = `${obs.feature.geometry.coordinates[1]},${obs.feature.geometry.coordinates[0]}`;
+              decreasingFRPLocations.add(key);
+            });
+          }
+        }
+      });
+      
+      return decreasingFRPLocations;
+    }
+
+    // Add after map initialization and before loadHotspots()
+    window.currentHotspotLayer = L.layerGroup().addTo(map);
+    window.recentHotspotLayer = L.layerGroup().addTo(map);
+    window.spreadPathLayer = L.layerGroup().addTo(map);
+    window.highestFrpLayer = L.layerGroup().addTo(map);
+    window.decreasingFrpLayer = L.layerGroup().addTo(map);
+    window.radiusLayer = L.layerGroup().addTo(map);
+
+    // In loadHotspots(), after removing old layers, clear all LayerGroups
+    window.currentHotspotLayer.clearLayers();
+    window.recentHotspotLayer.clearLayers();
+    window.spreadPathLayer.clearLayers();
+    window.highestFrpLayer.clearLayers();
+    window.decreasingFrpLayer.clearLayers();
+    window.radiusLayer.clearLayers();
+
+    // Add this function
+    function toggleMapLayer(layer, show) {
+      switch(layer) {
+        case 'current':
+          show ? map.addLayer(window.currentHotspotLayer) : map.removeLayer(window.currentHotspotLayer);
+          break;
+        case 'recent':
+          show ? map.addLayer(window.recentHotspotLayer) : map.removeLayer(window.recentHotspotLayer);
+          break;
+        case 'spread':
+          if (show) {
+            map.addLayer(window.spreadPathLayer);
+            if (window.spreadPathArrows) {
+              map.addLayer(window.spreadPathArrows);
+            }
+          } else {
+            map.removeLayer(window.spreadPathLayer);
+            if (window.spreadPathArrows) {
+              map.removeLayer(window.spreadPathArrows);
+            }
+          }
+          break;
+        case 'frp':
+          show ? map.addLayer(window.highestFrpLayer) : map.removeLayer(window.highestFrpLayer);
+          break;
+        case 'decreasing':
+          show ? map.addLayer(window.decreasingFrpLayer) : map.removeLayer(window.decreasingFrpLayer);
+          break;
+        case 'radius':
+          show ? map.addLayer(window.radiusLayer) : map.removeLayer(window.radiusLayer);
+          break;
+      }
+    }
+
+    // Add event listeners to legend items
+    setTimeout(() => {
+      document.querySelectorAll('.legend__item').forEach(item => {
+        item.addEventListener('click', function() {
+          const layer = this.getAttribute('data-layer');
+          this.classList.toggle('legend__item--inactive');
+          toggleMapLayer(layer, !this.classList.contains('legend__item--inactive'));
+        });
+      });
+    }, 500);
+
+    // In loadHotspots(), after removing old layers, clear all LayerGroups
+    window.currentHotspotLayer.clearLayers();
+    window.recentHotspotLayer.clearLayers();
+    window.spreadPathLayer.clearLayers();
+    window.highestFrpLayer.clearLayers();
+    window.decreasingFrpLayer.clearLayers();
+    window.radiusLayer.clearLayers();
+
+    // In geojsonLayer pointToLayer, instead of returning marker, add to correct LayerGroup:
+    // - If isMostRecent: window.recentHotspotLayer.addLayer(marker)
+    // - Else: window.currentHotspotLayer.addLayer(marker)
+    // - If isMaxFrp: window.highestFrpLayer.addLayer(glow), window.highestFrpLayer.addLayer(star)
+    // - If isDecreasingFRP: window.decreasingFrpLayer.addLayer(decreasingGlow), window.decreasingFrpLayer.addLayer(arrow)
+    // - Always return marker
+
+    // Add this function near the other modal logic
+    function showNoFiresPopup(msg) {
+      if (document.getElementById('noFiresModal')) return;
+      var modal = document.createElement('div');
+      modal.className = 'about-modal';
+      modal.id = 'noFiresModal';
+      modal.style.display = 'flex';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.setAttribute('aria-label', 'No Fires Detected');
+      modal.innerHTML = `
+        <div class="about-modal-content" style="max-width: 340px; text-align: center;">
+          <button class="about-modal-close" id="noFiresCloseBtn" title="Close" aria-label="Close">×</button>
+          <h3 style="margin-bottom: 18px;">No Fires Detected!</h3>
+          <div style="font-size: 16px; color: #1976d2; margin-bottom: 12px;">${msg || 'There are no active or recent fire hotspots.'}</div>
+          <div style="font-size: 13px; color: #666;">NASA satellites have not detected any new fires in the monitored area.<br>Check back later for updates.</div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      var closeBtn = document.getElementById('noFiresCloseBtn');
+      closeBtn.onclick = function() { modal.remove(); };
+      closeBtn.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { modal.remove(); e.preventDefault(); } });
+      modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+      document.addEventListener('keydown', function escHandler(e) {
+        if (modal.parentNode && e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', escHandler); }
+      });
+    }
+  </script>
+</body>
+</html> 
