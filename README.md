@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 
 ````markdown
 # Satellite Fire vs Explosion Classifier
